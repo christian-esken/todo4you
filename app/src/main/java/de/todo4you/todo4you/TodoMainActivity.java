@@ -1,5 +1,6 @@
 package de.todo4you.todo4you;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
@@ -52,12 +53,16 @@ public class TodoMainActivity extends AppCompatActivity implements AdapterView.O
         ts.start();
 
 
-        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
+        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.add_task_button);
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
+                Intent myIntent = new Intent(TodoMainActivity.this, AddTask.class);
+                myIntent.putExtra("key", "value"); //Optional parameters
+                TodoMainActivity.this.startActivity(myIntent);
+/*                Snackbar.make(view, "Add task hover", Snackbar.LENGTH_LONG)
                         .setAction("Action", null).show();
+                        */
             }
         });
     }
