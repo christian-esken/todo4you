@@ -22,10 +22,6 @@ public class StoreResult {
         this.exception = exception;
     }
 
-    public static StoreResult empty() {
-        return new StoreResult(Collections.emptyList(), StoreState.EMPTY);
-    }
-
     public static StoreResult loading() {
         return new StoreResult(Collections.emptyList(), StoreState.LOADING);
     }

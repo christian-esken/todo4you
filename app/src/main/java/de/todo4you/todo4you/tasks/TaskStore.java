@@ -9,7 +9,7 @@ import de.todo4you.todo4you.util.StoreUpdateNotifier;
 public class TaskStore extends Thread {
 
     private static TaskStore instance;
-    volatile StoreResult storeResult = StoreResult.empty();
+    volatile StoreResult storeResult = StoreResult.loading();
     List<StoreUpdateNotifier> listeners = new CopyOnWriteArrayList<>();
 
     private volatile boolean running = true;
