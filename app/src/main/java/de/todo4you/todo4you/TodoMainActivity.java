@@ -50,7 +50,6 @@ public class TodoMainActivity extends AppCompatActivity implements AdapterView.O
         taskListView.setOnItemClickListener(this);
 
         ts = new TaskSelector(this);
-        ts.start();
 
 
         FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.add_task_button);

@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
 
@@ -18,8 +19,6 @@ public class TaskDAO {
     private final static String accountsDevFileName = "accounts-dev.properties";
 
     private static TaskDAO instance;
-    List<Todo> todos = new ArrayList<>();
-    long lastLoaded = 0;
 
     private TaskDAO() {
     };
@@ -31,33 +30,20 @@ public class TaskDAO {
         return instance;
     }
 
-    public List<Todo> get() {
-        return todos;
-    }
 
-    public List<Todo> getWithRefresh() throws Exception {
-        if (needsRefresh()) {
-            boolean alsoCompleted = false;
-            int minusDays = 100;
-            int plusDays = 100;
-            load(minusDays, plusDays, alsoCompleted);
-            lastLoaded = System.currentTimeMillis();
+    public StoreResult loadAll() {
+        boolean alsoCompleted = false;
+        int minusDays = 100;
+        int plusDays = 100;
+        try {
+            List<Todo> todosLoaded = load(minusDays, plusDays, alsoCompleted);
+            return new StoreResult(todosLoaded, StoreState.LOADED);
+        } catch (Exception exc) {
+            return new StoreResult(Collections.emptyList(), StoreState.ERROR, "Calendar error: " + exc.getMessage(), exc);
         }
-        return todos;
     }
 
-    /**
-     *
-     * @return true if data is older than 1 minute or was never loaded before
-     */
-    private boolean needsRefresh() {
-        if (lastLoaded == 0)
-            return true;
-
-        return  lastLoaded + 60_000 < System.currentTimeMillis();
-    }
-
-    protected void load(int minusDays, int plusDays, boolean alsoCompleted) throws Exception {
+    protected List<Todo> load(int minusDays, int plusDays, boolean alsoCompleted) throws Exception {
         int accountId = 1;
         CalendarConnector connector = createConnector(accountId);
 
@@ -69,7 +55,7 @@ public class TaskDAO {
                 todosComplete.add(todo);
             }
         }
-        todos = todosComplete;
+        return todosComplete;
     }
 
     private CalendarConnector createConnector(int accountId) throws IOException {
@@ -111,19 +97,4 @@ public class TaskDAO {
         return conn;
     }
 
-    public Todo findBySummary(Object taskObject) {
-        if (!(taskObject instanceof String)) {
-            return null;
-        }
-        String taskDescription = (String)taskObject;
-        for (Todo todo : todos) {
-            if (todo.getSummary() == null) {
-                continue; // no summary
-            }
-            if (taskDescription.startsWith(todo.getSummary())) {
-                return todo;
-            }
-        }
-        return null;
-    }
 }

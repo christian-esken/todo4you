@@ -85,6 +85,32 @@ public class StandardDates {
          return LocalDate.now(userZone);
     }
 
+
+    public static String localDateToReadableString(LocalDate refDate) {
+        if (refDate == null) {
+            return UNSCHEDULED.name();
+        }
+        LocalDate today = now();
+        long daysUntil = today.until(refDate, DAYS);
+        if (daysUntil < -1) {
+            return OVERDUE.name() + " since " + (-daysUntil) + " days";
+        }
+        if (daysUntil == -1) {
+            return Name.YESTERDAY.name();
+        }
+        if (daysUntil == 0) {
+            return Name.TODAY.name();
+        }
+        if (daysUntil == 1) {
+            return Name.TOMORROW.name();
+        }
+        if (daysUntil < 6) {
+            return refDate.getDayOfWeek().name() + "( " + daysUntil + " days)";
+        }
+
+        return "In " + daysUntil + " days";
+    }
+
     /**
      * Converts the
      * @param refDate
@@ -100,11 +126,11 @@ public class StandardDates {
         if (daysUntil < -1) {
             return OVERDUE;
         }
-        if (daysUntil == 0) {
-            return Name.TODAY;
-        }
         if (daysUntil == -1) {
             return Name.YESTERDAY;
+        }
+        if (daysUntil == 0) {
+            return Name.TODAY;
         }
         if (daysUntil == 1) {
             return Name.TOMORROW;

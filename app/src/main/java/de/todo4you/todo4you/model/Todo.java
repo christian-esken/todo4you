@@ -153,7 +153,7 @@ public class Todo {
      */
     public LocalDate getAttentionDate() {
         LocalDate dd = getDueDate();
-        LocalDate sd = getDueDate();
+        LocalDate sd = getStartDate();
         if (dd == null && sd == null) {
             return null; // no attention required
         }
