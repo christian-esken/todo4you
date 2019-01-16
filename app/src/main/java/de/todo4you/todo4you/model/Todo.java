@@ -3,6 +3,7 @@ package de.todo4you.todo4you.model;
 import net.fortuna.ical4j.model.Property;
 import net.fortuna.ical4j.model.PropertyList;
 import net.fortuna.ical4j.model.component.VToDo;
+import net.fortuna.ical4j.model.property.Completed;
 import net.fortuna.ical4j.model.property.DtStart;
 import net.fortuna.ical4j.model.property.Due;
 import net.fortuna.ical4j.model.property.Status;
@@ -17,9 +18,14 @@ public class Todo {
     private static final String PROP_X_TODO4YOU_FAVORITE = "x-todo4you-favorite";
 
     final VToDo vtodo;
+    volatile String summary;
     volatile CompletionState completionState = CompletionState.NEEDS_ACTION;
     volatile int stars = 0;
     volatile boolean favorite = false;
+    volatile TodoState todoState = TodoState.UNINITIALIZED;
+    LocalDate startDate = null;
+    LocalDate dueDate = null;
+    LocalDate completionDate = null;
     volatile boolean dirty = false;
 
     public Todo(VToDo vtodo) {
@@ -29,7 +35,28 @@ public class Todo {
         PropertyList properties = vtodo.getProperties();
         stars = fromIntPropertyToModel(properties.getProperty(PROP_X_TODO4YOU_STARS), 0, 5, 0);
         favorite = fromBooleanPropertyToModel(properties.getProperty(PROP_X_TODO4YOU_FAVORITE), false);
+        summary = vtodo.getSummary().getValue();
+        todoState = TodoState.UNMODIFIED;
+
+        DtStart start = vtodo.getStartDate();
+        this.startDate = startDate == null ? null : StandardDates.dateToLocalDate(start.getDate());
+        Due due = vtodo.getDue();
+        this.dueDate = due == null ? null : StandardDates.dateToLocalDate(due.getDate());
+        Completed completed = vtodo.getDateCompleted();
+        this.completionDate = completed == null ? null : StandardDates.dateToLocalDate(completed.getDate());
     }
+
+    public Todo(String summary) {
+        this.summary = summary;
+        vtodo = null; // invalid
+        this.completionState = CompletionState.NEEDS_ACTION;
+        todoState = TodoState.FRESHLY_CREATED;
+
+
+        stars = 0;
+        favorite = false;
+    }
+
 
     private boolean fromBooleanPropertyToModel(Property property, boolean defaultValue) {
         if (property == null) {
@@ -85,7 +112,7 @@ public class Todo {
     }
 
     public String getSummary() {
-        return vtodo.getSummary().getValue();
+        return summary == null ? "" : summary;
     }
 
     public CompletionState getCompletionState() {
@@ -121,28 +148,16 @@ public class Todo {
         }
     }
 
-    public boolean isDirty() {
-        return dirty;
-    }
-
-    public VToDo vtodo() {
-        return vtodo;
-    }
-
     public LocalDate getDueDate() {
-        Due due = vtodo.getDue();
-        if (due == null) {
-            return null;
-        }
-        return StandardDates.dateToLocalDate(due.getDate());
+        return  dueDate;
     }
 
     public LocalDate getStartDate() {
-        DtStart startDate = vtodo.getStartDate();
-        if (startDate == null) {
-            return null;
-        }
-        return StandardDates.dateToLocalDate(startDate.getDate());
+        return startDate;
+    }
+
+    public LocalDate getCompletionDate() {
+        return completionDate;
     }
 
     /**
