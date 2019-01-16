@@ -11,6 +11,9 @@ import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
 import android.widget.RadioButton;
 
+import de.todo4you.todo4you.model.Todo;
+import de.todo4you.todo4you.tasks.TaskStore;
+
 public class AddTask extends AppCompatActivity implements View.OnFocusChangeListener, View.OnClickListener {
 
     @Override
@@ -30,8 +33,10 @@ public class AddTask extends AppCompatActivity implements View.OnFocusChangeList
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
+                Snackbar.make(view, "Adding task", Snackbar.LENGTH_LONG)
                         .setAction("Action", null).show();
+                Todo task = new Todo(summaryText.getText().toString());
+                TaskStore.instance().addNewTask(task);
             }
         });
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
@@ -40,22 +45,21 @@ public class AddTask extends AppCompatActivity implements View.OnFocusChangeList
     @Override
     public void onFocusChange(View v, boolean hasFocus) {
         if (!hasFocus && (v instanceof EditText)) {
-            //v.clearFocus();
             hideKeyboard(this, v);
-            //v.clearFocus();
         }
     }
 
     public static void hideKeyboard(Activity activity, View v) {
         InputMethodManager imm = (InputMethodManager) activity.getSystemService(Activity.INPUT_METHOD_SERVICE);
         //Find the currently focused view, so we can grab the correct window token from it.
+        /*
         View view = activity.getCurrentFocus();
         //If no view currently has focus, create a new one, just so we can grab a window token from it
         if (view == null) {
             view = v;
         }
+        */
         imm.hideSoftInputFromWindow(v.getWindowToken(), 0);
-        //view.clearFocus();
     }
 
     @Override

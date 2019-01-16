@@ -3,14 +3,14 @@ package de.todo4you.todo4you;
 import android.content.Intent;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
-import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.ImageButton;
 import android.widget.ListView;
 import android.widget.TextView;
 
@@ -64,6 +64,19 @@ public class TodoMainActivity extends AppCompatActivity implements AdapterView.O
                         */
             }
         });
+
+        ImageButton quicksortButton = findViewById(R.id.quickSortLaunchButton);
+        quicksortButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Intent myIntent = new Intent(TodoMainActivity.this, QuickSortActivity.class);
+                myIntent.putExtra("key", "value"); //Optional parameters
+                TodoMainActivity.this.startActivity(myIntent);
+/*                Snackbar.make(view, "Add task hover", Snackbar.LENGTH_LONG)
+                        .setAction("Action", null).show();
+                        */
+            }
+        });
     }
 
 
@@ -80,10 +93,19 @@ public class TodoMainActivity extends AppCompatActivity implements AdapterView.O
     }
 
     @Override
+    protected void onStart() {
+        super.onStart();
+    }
+
+    @Override
     protected void onStop() {
+        // When doing the add task activity, this onStop() is called. After the onStart() there
+        // would be no updates, e.g. the added task will not show up.
+        /*
         TaskSelector tsRef = ts;
         if (tsRef != null)
             tsRef.shutdownNow();
+            */
         super.onStop();
     }
 

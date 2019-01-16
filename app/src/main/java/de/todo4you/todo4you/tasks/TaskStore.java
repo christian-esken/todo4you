@@ -1,5 +1,6 @@
 package de.todo4you.todo4you.tasks;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -11,11 +12,14 @@ public class TaskStore extends Thread {
     private static TaskStore instance;
     volatile StoreResult storeResult = StoreResult.loading();
     List<StoreUpdateNotifier> listeners = new CopyOnWriteArrayList<>();
+    List<Todo> unsyncedTasks = new ArrayList<>();
 
     private volatile boolean running = true;
 
     public StoreResult getAll() {
-        return storeResult;
+        StoreResult mergedResult = new StoreResult(storeResult.getTodos(), storeResult.getStatus(), storeResult.getUserErrorMessaage(), storeResult.getException());
+        mergedResult.addUnsyncedTodos(unsyncedTasks);
+        return mergedResult;
     }
 
     public static final synchronized TaskStore instance() {
@@ -26,6 +30,10 @@ public class TaskStore extends Thread {
         return instance;
     }
 
+    TaskStore()
+    {
+        setName("TaskStoreUpdater");
+    }
     void registerListener(StoreUpdateNotifier obj) {
         listeners.add(obj);
     }
@@ -40,13 +48,23 @@ public class TaskStore extends Thread {
         }
         String taskDescription = (String)taskObject;
         for (Todo todo : storeResult.getTodos()) {
-            if (todo.getSummary() == null) {
+            if (todo.getSummary().isEmpty()) {
                 continue; // no summary
             }
             if (taskDescription.startsWith(todo.getSummary())) {
                 return todo;
             }
         }
+
+        for (Todo todo : unsyncedTasks) {
+            if (todo.getSummary().isEmpty()) {
+                continue; // no summary
+            }
+            if (taskDescription.startsWith(todo.getSummary())) {
+                return todo;
+            }
+        }
+
         return null;
     }
 
@@ -55,17 +73,14 @@ public class TaskStore extends Thread {
         while (running) {
             try {
                 StoreResult todosLoaded = TaskDAO.instance().loadAll();
+                todosLoaded.addUnsyncedTodos(unsyncedTasks);
+
                 // possiby merge TO DO's
                 if (todosLoaded.getStatus() == StoreState.LOADED) {
                     // everything loaded well => replace complete result
                     storeResult = todosLoaded;
-                    for (StoreUpdateNotifier listener : listeners) {
-                        synchronized (listener) {
-                            // Quite trivially implemented update process. If used not properly, listeners
-                            // may lose notifications.
-                            listener.update(storeResult);
-                        }
-                    }
+
+                    informListeners();
 
                 } else {
                     // ERROR => keep the old todos. Might be just a network disconnect
@@ -92,8 +107,24 @@ public class TaskStore extends Thread {
         }
     }
 
+    private void informListeners() {
+        for (StoreUpdateNotifier listener : listeners) {
+            synchronized (listener) {
+                // Quite trivially implemented update process. If used not properly, listeners
+                // may lose notifications.
+                listener.update(storeResult);
+            }
+        }
+    }
+
     public void shutdownNow() {
         this.running = false;
         this.interrupt();
+    }
+
+    public void addNewTask(Todo task) {
+        unsyncedTasks.add(task); // For next refresh
+        storeResult.addUnsyncedTodo(task); // For now
+        informListeners();
     }
 }

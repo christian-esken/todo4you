@@ -42,5 +42,13 @@ public class StoreResult {
     public Exception getException() {
         return exception;
     }
+
+    public void addUnsyncedTodo(Todo unsyncedTask) {
+        todos.add(unsyncedTask);
+    }
+
+    public void addUnsyncedTodos(List<Todo> unsyncedTasks) {
+        todos.addAll(unsyncedTasks);
+    }
 }
 

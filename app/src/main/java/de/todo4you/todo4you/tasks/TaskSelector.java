@@ -60,8 +60,7 @@ public class TaskSelector implements StoreUpdateNotifier {
     @Override
     public void update(StoreResult storeResult) {
 
-        // TODO Evaluate currentPollHasIssues later, showing a warn sign if error reamins for
-        //      a longer time.
+        // TODO currentPollHasIssues should warn the user if error remains for a longer time.
         boolean currentPollHasIssues = storeResult.getStatus() == StoreState.ERROR;
 
         String[] newMessages;
