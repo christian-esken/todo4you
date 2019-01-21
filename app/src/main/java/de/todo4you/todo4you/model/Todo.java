@@ -19,6 +19,7 @@ public class Todo {
 
     final VToDo vtodo;
     volatile String summary;
+    volatile String description;
     volatile CompletionState completionState = CompletionState.NEEDS_ACTION;
     volatile int stars = 0;
     volatile boolean favorite = false;
@@ -35,7 +36,8 @@ public class Todo {
         PropertyList properties = vtodo.getProperties();
         stars = fromIntPropertyToModel(properties.getProperty(PROP_X_TODO4YOU_STARS), 0, 5, 0);
         favorite = fromBooleanPropertyToModel(properties.getProperty(PROP_X_TODO4YOU_FAVORITE), false);
-        summary = vtodo.getSummary().getValue();
+        summary = fromStringPropertyToModel(vtodo.getSummary(), null);
+        description = fromStringPropertyToModel(vtodo.getDescription(), null);
         todoState = TodoState.UNMODIFIED;
 
         DtStart start = vtodo.getStartDate();
@@ -89,6 +91,17 @@ public class Todo {
         }
     }
 
+
+    private String fromStringPropertyToModel(Property property, String defaultValue) {
+        if (property == null) {
+            return defaultValue;
+        }
+
+        String value = property.getValue();
+        return value == null ? defaultValue : value;
+    }
+
+
     private CompletionState fromLibToModel(Status status) {
         // Hint: Status is an optional field, thus we set the internal state to
         // CompletionState.UNDEFINED if it cannot be determined by the given status
@@ -113,6 +126,11 @@ public class Todo {
 
     public String getSummary() {
         return summary == null ? "" : summary;
+    }
+
+
+    public String getDescription() {
+        return description == null ? "" : description;
     }
 
     public CompletionState getCompletionState() {
@@ -187,5 +205,16 @@ public class Todo {
     @Override
     public String toString() {
         return getSummary() + ", dirty=" + dirty;
+    }
+
+    public void setDueDate(LocalDate now) {
+        if (now == null && dueDate != null) {
+            dueDate = null;
+            this.dirty = true;
+        }
+        if (!now.equals(dueDate)) {
+            dueDate = now;
+            this.dirty = true;
+        }
     }
 }

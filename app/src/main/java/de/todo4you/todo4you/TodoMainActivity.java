@@ -3,6 +3,7 @@ package de.todo4you.todo4you;
 import android.content.Intent;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
+import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.view.Menu;
@@ -70,11 +71,13 @@ public class TodoMainActivity extends AppCompatActivity implements AdapterView.O
             @Override
             public void onClick(View view) {
                 Intent myIntent = new Intent(TodoMainActivity.this, QuickSortActivity.class);
-                myIntent.putExtra("key", "value"); //Optional parameters
-                TodoMainActivity.this.startActivity(myIntent);
-/*                Snackbar.make(view, "Add task hover", Snackbar.LENGTH_LONG)
-                        .setAction("Action", null).show();
-                        */
+                if (highlightedTextView == null) {
+                    Snackbar.make(view, "Please slect a task before editing.", Snackbar.LENGTH_LONG)
+                            .setAction("Action", null).show();
+                } else {
+                    myIntent.putExtra("taskRef", highlightedTextView.getText()); //Optional parameters
+                    TodoMainActivity.this.startActivity(myIntent);
+                }
             }
         });
     }
@@ -92,6 +95,10 @@ public class TodoMainActivity extends AppCompatActivity implements AdapterView.O
         return highlightedInfoTextView;
     }
 
+    public TextView getHighlightedInfoDescTextView() {
+        return findViewById(R.id.highlightedTaskDesc);
+    }
+
     @Override
     protected void onStart() {
         super.onStart();
@@ -99,8 +106,9 @@ public class TodoMainActivity extends AppCompatActivity implements AdapterView.O
 
     @Override
     protected void onStop() {
-        // When doing the add task activity, this onStop() is called. After the onStart() there
-        // would be no updates, e.g. the added task will not show up.
+        // When doing the add task activity, this onStop() is called. We do not shut down our
+        // TaskSelector, so it can continue to listen on changed tasks, e.g. via the AddTask
+        // activity or any modifying activities (title, due date, ...).
         /*
         TaskSelector tsRef = ts;
         if (tsRef != null)
@@ -112,7 +120,7 @@ public class TodoMainActivity extends AppCompatActivity implements AdapterView.O
     @Override
     public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
         Object itemAtPosition = parent.getItemAtPosition(position);
-        ts.highlightTask(itemAtPosition);
+        ts.highlightTask(itemAtPosition); // This is currently the String
     }
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {

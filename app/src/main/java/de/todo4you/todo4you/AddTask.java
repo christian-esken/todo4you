@@ -26,8 +26,17 @@ public class AddTask extends AppCompatActivity implements View.OnFocusChangeList
         EditText summaryText = (EditText) findViewById(R.id.summary);
         summaryText.setOnFocusChangeListener(this);
 
-        RadioButton rb = (RadioButton) findViewById(R.id.radioButton_start);
-        rb.setOnClickListener(this);
+        // Hide keyboard when the user clicks on something else
+        makeHideMenu(R.id.radioButton_start);
+        makeHideMenu(R.id.radioButton_due);
+        makeHideMenu(R.id.radioButton_notscheduled);
+
+        makeHideMenu(R.id.radioButton_today);
+        makeHideMenu(R.id.radioButton_tomorrow);
+        makeHideMenu(R.id.radioButton_thisweek);
+        makeHideMenu(R.id.radioButton_weekend);
+        makeHideMenu(R.id.radioButton_nextweek);
+        makeHideMenu(R.id.radioButton_fixedDate);
 
         FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
         fab.setOnClickListener(new View.OnClickListener() {
@@ -40,6 +49,11 @@ public class AddTask extends AppCompatActivity implements View.OnFocusChangeList
             }
         });
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+    }
+
+    private void makeHideMenu(int idRadioButton) {
+        RadioButton rb = (RadioButton) findViewById(idRadioButton);
+        rb.setOnClickListener(this);
     }
 
     @Override

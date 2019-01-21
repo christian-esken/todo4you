@@ -46,7 +46,7 @@
             <TextView
                 android:id="@+id/highlightedTask"
                 android:layout_width="0dp"
-                android:layout_height="61dp"
+                android:layout_height="wrap_content"
                 android:layout_marginStart="8dp"
                 android:layout_marginEnd="8dp"
                 android:background="#ffccccee"
@@ -59,11 +59,22 @@
                 tools:text="Highlighted Action" />
 
             <TextView
+                android:id="@+id/highlightedTaskDesc"
+                android:layout_width="0dp"
+                android:layout_height="32dp"
+                android:layout_marginStart="8dp"
+                android:layout_marginEnd="8dp"
+                android:text="TextView"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/highlightedTask" />
+
+            <TextView
                 android:id="@+id/highlightedTaskInfo"
-                android:layout_width="225dp"
+                android:layout_width="0dp"
                 android:layout_height="33dp"
                 android:layout_marginStart="8dp"
-                android:layout_marginTop="8dp"
+                android:layout_marginTop="4dp"
                 android:layout_marginEnd="4dp"
                 android:layout_marginBottom="8dp"
                 android:background="#ffdddddd"
@@ -71,14 +82,14 @@
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toStartOf="@+id/quickSortLaunchButton"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/highlightedTask" />
+                app:layout_constraintTop_toBottomOf="@+id/highlightedTaskDesc" />
 
             <ImageButton
                 android:id="@+id/imageButton"
                 android:layout_width="34dp"
                 android:layout_height="34dp"
-                android:layout_marginStart="2dp"
-                android:layout_marginTop="8dp"
+                android:layout_marginStart="1dp"
+                android:layout_marginTop="24dp"
                 android:layout_marginEnd="2dp"
                 android:contentDescription="@string/edit_task"
                 android:scaleX="0.75"
@@ -93,8 +104,8 @@
                 android:layout_width="34dp"
                 android:layout_height="34dp"
                 android:layout_marginStart="2dp"
-                android:layout_marginTop="8dp"
-                android:layout_marginEnd="2dp"
+                android:layout_marginTop="24dp"
+                android:layout_marginEnd="1dp"
                 android:contentDescription="@string/edit_task"
                 android:scaleX="0.75"
                 android:scaleY="0.75"
@@ -107,8 +118,8 @@
                 android:id="@+id/highlightLike"
                 android:layout_width="34dp"
                 android:layout_height="34dp"
-                android:layout_marginStart="2dp"
-                android:layout_marginTop="8dp"
+                android:layout_marginStart="1dp"
+                android:layout_marginTop="24dp"
                 android:layout_marginEnd="4dp"
                 android:contentDescription="@string/star_task"
                 app:layout_constraintEnd_toEndOf="parent"

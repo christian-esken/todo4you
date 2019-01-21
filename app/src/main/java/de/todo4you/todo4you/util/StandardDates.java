@@ -3,6 +3,7 @@ package de.todo4you.todo4you.util;
 import java.time.DayOfWeek;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Date;
 
@@ -81,10 +82,21 @@ public class StandardDates {
         return localDateToName(refDate);
     }
 
+    /**
+     * Returns LocalDate using the user time zone.
+     * @return now in user time zone
+     */
     public static LocalDate now() {
          return LocalDate.now(userZone);
     }
 
+    /**
+     * Returns LocalDateTime using the user time zone.
+     * @return now in user time zone
+     */
+    public static LocalDateTime nowDateTime() {
+        return LocalDateTime.now(userZone);
+    }
 
     public static String localDateToReadableString(LocalDate refDate) {
         if (refDate == null) {

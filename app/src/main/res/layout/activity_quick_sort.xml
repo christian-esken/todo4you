@@ -11,13 +11,24 @@
         android:layout_height="match_parent"
         android:orientation="vertical">
 
+        <EditText
+            android:id="@+id/description"
+            android:layout_width="match_parent"
+            android:layout_height="40dp"
+            android:layout_weight="1"
+            android:ems="10"
+            android:inputType="textMultiLine"
+            android:singleLine="false"
+            android:text="Desc"
+            tools:text="Desc" />
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal">
 
             <TextView
-                android:id="@+id/textView3"
+                android:id="@+id/quick_overview"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="8dp"
@@ -33,16 +44,10 @@
 
         </LinearLayout>
 
-        <TextView
-            android:id="@+id/textView4"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="TextView" />
-
         <LinearLayout
             android:id="@+id/linearLayout"
             android:layout_width="match_parent"
-            android:layout_height="172dp"
+            android:layout_height="138dp"
             android:layout_marginTop="8dp"
             android:orientation="horizontal"
             app:layout_constraintBottom_toTopOf="@+id/linearLayout2"
@@ -51,8 +56,8 @@
             tools:layout_editor_absoluteX="8dp">
 
             <Button
-                android:id="@+id/button11"
-                android:layout_width="131dp"
+                android:id="@+id/quick_when_schedule"
+                android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:layout_marginStart="8dp"
                 android:layout_marginEnd="8dp"
@@ -62,8 +67,8 @@
                 tools:layout_editor_absoluteY="360dp" />
 
             <Button
-                android:id="@+id/button12"
-                android:layout_width="131dp"
+                android:id="@+id/quick_when_today"
+                android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:layout_marginStart="8dp"
                 android:layout_marginEnd="8dp"
@@ -71,6 +76,20 @@
                 android:text="TODAY"
                 app:layout_constraintEnd_toEndOf="parent"
                 tools:layout_editor_absoluteY="360dp" />
+
+            <Button
+                android:id="@+id/quick_when_tomorrow"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:text="Tomorrow" />
+
+            <Button
+                android:id="@+id/quick_when_1week"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:text="In 1 week" />
 
         </LinearLayout>
 
@@ -85,18 +104,18 @@
             tools:layout_editor_absoluteX="8dp">
 
             <Button
-                android:id="@+id/button21"
+                android:id="@+id/quick_status"
                 android:layout_width="131dp"
                 android:layout_height="match_parent"
                 android:layout_marginStart="8dp"
                 android:layout_marginEnd="8dp"
                 android:layout_weight="1"
-                android:text="Trash"
+                android:text="Complete / Cancel"
                 app:layout_constraintEnd_toEndOf="parent"
                 tools:layout_editor_absoluteY="360dp" />
 
             <Button
-                android:id="@+id/button22"
+                android:id="@+id/quick_delegate"
                 android:layout_width="131dp"
                 android:layout_height="match_parent"
                 android:layout_marginStart="8dp"

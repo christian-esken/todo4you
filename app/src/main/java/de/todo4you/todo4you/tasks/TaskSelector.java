@@ -120,14 +120,16 @@ public class TaskSelector implements StoreUpdateNotifier {
         activity.runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                final ArrayAdapter<String> adapter = activity.getTaskListViewAdapter();
                 final TextView highlightedTextView = activity.getHighlightedTextView();
                 final TextView highlightedInfoTextView = activity.getHighlightedInfoTextView();
+                final TextView highlightedInfoDescTextView = activity.getHighlightedInfoDescTextView();
                 if (thl != null) {
                     String prefixMessage = StandardDates.localDateToReadableString(thl.getAttentionDate());
                     highlightedTextView.setText(thl.getSummary());
                     highlightedInfoTextView.setText(prefixMessage);
                     highlightedTextView.setBackgroundColor(Color.LTGRAY);
+
+                    highlightedInfoDescTextView.setText(thl.getDescription());
 
                     ActionType actionType = determineAction(thl);
                     int color = Color.LTGRAY;
@@ -140,11 +142,13 @@ public class TaskSelector implements StoreUpdateNotifier {
                 } else {
                     highlightedTextView.setText("No tasks. Add one with the + button");
                     highlightedInfoTextView.setText("");
+                    highlightedInfoDescTextView.setText("");
                     highlightedTextView.setBackgroundColor(0xFF666666);
                     highlightedInfoTextView.setBackgroundColor(0xFF666666);
                 }
 
                 if (newMessages != null) {
+                    final ArrayAdapter<String> adapter = activity.getTaskListViewAdapter();
                     adapter.clear();
                     adapter.addAll(newMessages);
                 }

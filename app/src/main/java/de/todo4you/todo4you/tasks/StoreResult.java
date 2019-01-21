@@ -1,5 +1,6 @@
 package de.todo4you.todo4you.tasks;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -11,12 +12,24 @@ public class StoreResult {
     private final String userErrorMessaage;
     private final Exception exception;
 
+    /**
+     * Creates a new StoreResult. The To Do references are copied to a new list.
+     * @param todos
+     * @param storeState
+     */
     public StoreResult (List<Todo> todos, StoreState storeState) {
         this(todos, storeState, null, null);
     }
 
+    /**
+     * Creates a new StoreResult. The To Do references are copied to a new list.
+     * @param todos
+     * @param status
+     * @param userErrorMessaage
+     * @param exception
+     */
     public StoreResult (List<Todo> todos, StoreState status, String userErrorMessaage, Exception exception) {
-        this.todos = todos;
+        this.todos = new ArrayList<>(todos);
         this.status = status;
         this.userErrorMessaage = userErrorMessaage;
         this.exception = exception;
