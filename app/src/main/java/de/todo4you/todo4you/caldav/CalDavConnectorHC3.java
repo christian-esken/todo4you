@@ -7,6 +7,7 @@ import net.fortuna.ical4j.model.Component;
 import net.fortuna.ical4j.model.ComponentList;
 import net.fortuna.ical4j.model.component.CalendarComponent;
 import net.fortuna.ical4j.model.component.VToDo;
+import net.fortuna.ical4j.model.property.DtStamp;
 
 import org.apache.commons.httpclient.HostConfiguration;
 import org.apache.commons.httpclient.UsernamePasswordCredentials;
@@ -17,6 +18,7 @@ import org.osaf.caldav4j.methods.CalDAV4JMethodFactory;
 import org.osaf.caldav4j.methods.HttpClient;
 import org.osaf.caldav4j.model.request.CalendarQuery;
 import org.osaf.caldav4j.util.GenerateQuery;
+import org.osaf.caldav4j.util.ICalendarUtils;
 
 import java.time.LocalDate;
 import java.time.temporal.ChronoField;
@@ -90,11 +92,35 @@ public class CalDavConnectorHC3 implements CalendarConnector {
     @Override
     public boolean add(Todo task) throws CalDAV4JException {
         HttpClient httpClient = getHttpClient();
-        CalDAVCollection collection = new CalDAVCollection(conn.path(), (HostConfiguration) httpClient.getHostConfiguration().clone(), new CalDAV4JMethodFactory(), PROC_ID_TODO4YOU);
+        VTodoCalDAVCollection collection = new VTodoCalDAVCollection(conn.path(), (HostConfiguration) httpClient.getHostConfiguration().clone(), new CalDAV4JMethodFactory(), PROC_ID_TODO4YOU);
 
-        collection.add(httpClient, task.getInternalVtodo(), null);
+        VToDo vtodo =  task.getInternalVtodo();
+        ICalendarUtils.addOrReplaceProperty(vtodo, new DtStamp());
+        vtodo.validate();
+
+        collection.add(httpClient, vtodo, null);
         return true;
     }
+
+    @Override
+    public boolean update(Todo task) throws CalDAV4JException {
+        HttpClient httpClient = getHttpClient();
+        VTodoCalDAVCollection collection = new VTodoCalDAVCollection(conn.path(), (HostConfiguration) httpClient.getHostConfiguration().clone(), new CalDAV4JMethodFactory(), PROC_ID_TODO4YOU);
+
+        VToDo vtodo =  task.getInternalVtodo();
+        ICalendarUtils.addOrReplaceProperty(vtodo, new DtStamp());
+        vtodo.validate();
+
+        try {
+            collection.updateMasterTodo(httpClient, vtodo, null, collection);
+        } catch (IllegalStateException ise) {
+            // wrong state cannot update => we could try to run an add() instead, as some other
+            // caldav client may have removed it.
+            throw new CalDAV4JException(ise.getMessage());
+        }
+        return true;
+    }
+
 
     @Override
     public ConnectionParameters probe(ConnectionParameters connectionParameters) {

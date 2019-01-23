@@ -78,7 +78,7 @@ public class TaskStore extends Thread {
         while (running) {
             try {
                 TaskDAO taskDao = TaskDAO.instance();
-                // -1- upstream-sync new tasks
+                // -1- upstream-sync NEW tasks
                 Iterator<Todo> iterator = unsyncedTasks.iterator();
                 while (iterator.hasNext()) {
                     Todo unsyncedTask = iterator.next();
@@ -89,16 +89,12 @@ public class TaskStore extends Thread {
                     }
                 }
 
-                // -1- upstream-sync modified tasks
+                // -2- upstream-sync MODIFIED tasks
                 for (Todo todo : storeResult.getTodos()) {
                     if (todo.isDirty()) {
                         if (todo.updateVTodoFromModel()) {
                             // really modified (not a A-B-A reverting change)
-
-                            // TODO For modifications the ETag must be set properly.
-                            //      Otherwise servers will reject the change.
-                            // We can encounter ResourceOutOfDateException
-                            if (taskDao.add(todo)) {
+                            if (taskDao.update(todo)) {
                                 // succesfully synced back
                                 todo.setDirty(false);
                             }
@@ -106,15 +102,14 @@ public class TaskStore extends Thread {
                     }
                 }
 
-
+                // -3- Load everything new
                 StoreResult todosLoaded = taskDao.loadAll();
                 todosLoaded.addUnsyncedTodos(unsyncedTasks);
 
-                // possiby merge TO DO's
+                // -4- Set new storeResult, merging local and remote stores
                 if (todosLoaded.getStatus() == StoreState.LOADED) {
-                    // everything loaded well => replace complete result
-                    storeResult = todosLoaded;
-
+                    // everything loaded well => merge in changes
+                    storeResult = merge(storeResult, todosLoaded);
                     informListeners();
 
                 } else {
@@ -133,13 +128,54 @@ public class TaskStore extends Thread {
                 continue;
             }
             try {
-                Thread.sleep(60000);
+                Thread.sleep(6000);
             } catch (InterruptedException e) {
                 continue;
             }
 
             //adapter.notifyDataSetChanged();
         }
+    }
+
+    /**
+     * Merges the local (in memory) with the remote (fetched) StoreResult and returns a
+     * new StoreResult. In normal cases, the new StoreResult contains all entries from remote.
+     * Locally modified and created entries are taken from local instead of remote.
+     * <br>
+     *     Implementation hint: The merge takes precautions to not overwrite locally modified
+     *     entries. This can easily happen, when merge() is called while the user edits a task.
+     *
+     * @param local
+     * @param remote
+     * @return
+     */
+    private StoreResult merge(StoreResult local, StoreResult remote) {
+        List<Todo> merged = new ArrayList<>(remote.getTodos().size());
+        List<Todo> locked = new ArrayList<>();
+
+        // -1- Pick all remote entries, unless a local entry is dirty (not yet synced)
+        for (Todo rtodo : remote.getTodos()) {
+            String ruid = rtodo.getUid();
+            Todo ltodo = local.getByUid(ruid);
+            /*    ltodo  null  locked   add
+             *              t       *   merged
+             *              f       f   merged
+             *              f       t   locked
+             */
+            boolean isLocked = ltodo != null && ltodo.isLocked();
+            if (isLocked) {
+                locked.add(ltodo);
+            } else {
+                // TOOD Also check if local modification time is newer than remote. Then keep the local.
+                merged.add(rtodo);
+            }
+        }
+
+        // -2- Pick all local dirty entries (they are modified or newly created)
+        merged.addAll(locked);
+
+        StoreResult mergedResult = new StoreResult(merged, remote.getStatus(), remote.getUserErrorMessaage(), remote.getException());
+        return mergedResult;
     }
 
     private void informListeners() {

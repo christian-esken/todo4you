@@ -10,5 +10,6 @@ import de.todo4you.todo4you.model.Todo;
 public interface CalendarConnector {
     List<Todo> get(LocalDate fromDate, LocalDate toDate, boolean onlyActive) throws Exception;
     boolean add(Todo task) throws CalDAV4JException;
+    boolean update(Todo task) throws CalDAV4JException;
     ConnectionParameters probe(ConnectionParameters connectionParameters);
 }

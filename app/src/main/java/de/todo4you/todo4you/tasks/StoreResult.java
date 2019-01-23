@@ -63,5 +63,17 @@ public class StoreResult {
     public void addUnsyncedTodos(List<Todo> unsyncedTasks) {
         todos.addAll(unsyncedTasks);
     }
+
+    public Todo getByUid(String ruid) {
+        if (ruid == null) {
+            return null;
+        }
+        for (Todo todo : todos) {
+            if (ruid.equals(todo.getUid())) {
+                return todo;
+            }
+        }
+        return null;
+    }
 }
 

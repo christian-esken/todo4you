@@ -108,4 +108,15 @@ public class TaskDAO {
             return false;
         }
     }
+
+    public boolean update(Todo task) {
+        CalendarConnector connector = null;
+        try {
+            connector = createConnector(accountId);
+            return connector.update(task);
+        } catch (Exception e) {
+            lastUpstreamException = e;
+            return false;
+        }
+    }
 }

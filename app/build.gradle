@@ -41,6 +41,9 @@ dependencies {
     //compile("com.github.caldav4j:caldav4j:1.0.0-rc.2")
     // caldav4j requires a jcache implementation
     implementation 'com.trivago:triava:2.0.1'
+
+    implementation 'javax.servlet:javax.servlet-api:3.1.0'
+
     // test stuff
     testImplementation 'junit:junit:4.12'
     androidTestImplementation 'com.android.support.test:runner:1.0.2'

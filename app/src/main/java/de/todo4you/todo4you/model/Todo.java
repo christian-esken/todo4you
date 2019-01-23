@@ -364,6 +364,10 @@ public class Todo {
         return getSummary() + ", dirty=" + dirty;
     }
 
+    public String getUid() {
+        return uid;
+    }
+
     public void setDueDate(LocalDate now) {
         if (now == null && dueDate != null) {
             dueDate = null;
@@ -387,4 +391,11 @@ public class Todo {
     public boolean isDirty() {
         return dirty;
     }
+
+    public boolean isLocked() {
+        // TOOD Implement actual entry locking. From a design perspective, the TaskStore must
+        // hold all locked uid's. To lock: modified and new tasks.
+        return dirty;
+    }
+
 }
