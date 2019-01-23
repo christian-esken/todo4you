@@ -1,6 +1,7 @@
 package de.todo4you.todo4you.tasks;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -51,6 +52,10 @@ public class TaskStore extends Thread {
             if (todo.getSummary().isEmpty()) {
                 continue; // no summary
             }
+            // findBySummary() is hacky. Two entries could have the same summary.
+            // We need full tasks in the taskListView (or at least a key/reference)
+            // Additionally the taskDescription has a status prepended, so only the start
+            // matches.
             if (taskDescription.startsWith(todo.getSummary())) {
                 return todo;
             }
@@ -72,7 +77,37 @@ public class TaskStore extends Thread {
     public void run() {
         while (running) {
             try {
-                StoreResult todosLoaded = TaskDAO.instance().loadAll();
+                TaskDAO taskDao = TaskDAO.instance();
+                // -1- upstream-sync new tasks
+                Iterator<Todo> iterator = unsyncedTasks.iterator();
+                while (iterator.hasNext()) {
+                    Todo unsyncedTask = iterator.next();
+                    unsyncedTask.updateVTodoFromModel();
+                    if (taskDao.add(unsyncedTask)) {
+                        unsyncedTask.setDirty(false);
+                        iterator.remove();
+                    }
+                }
+
+                // -1- upstream-sync modified tasks
+                for (Todo todo : storeResult.getTodos()) {
+                    if (todo.isDirty()) {
+                        if (todo.updateVTodoFromModel()) {
+                            // really modified (not a A-B-A reverting change)
+
+                            // TODO For modifications the ETag must be set properly.
+                            //      Otherwise servers will reject the change.
+                            // We can encounter ResourceOutOfDateException
+                            if (taskDao.add(todo)) {
+                                // succesfully synced back
+                                todo.setDirty(false);
+                            }
+                        }
+                    }
+                }
+
+
+                StoreResult todosLoaded = taskDao.loadAll();
                 todosLoaded.addUnsyncedTodos(unsyncedTasks);
 
                 // possiby merge TO DO's

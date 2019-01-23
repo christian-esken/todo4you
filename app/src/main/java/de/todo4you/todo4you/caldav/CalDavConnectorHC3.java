@@ -88,6 +88,15 @@ public class CalDavConnectorHC3 implements CalendarConnector {
     }
 
     @Override
+    public boolean add(Todo task) throws CalDAV4JException {
+        HttpClient httpClient = getHttpClient();
+        CalDAVCollection collection = new CalDAVCollection(conn.path(), (HostConfiguration) httpClient.getHostConfiguration().clone(), new CalDAV4JMethodFactory(), PROC_ID_TODO4YOU);
+
+        collection.add(httpClient, task.getInternalVtodo(), null);
+        return true;
+    }
+
+    @Override
     public ConnectionParameters probe(ConnectionParameters connectionParameters) {
         // no probing implemented => best set of parameters is the original one
         return connectionParameters;

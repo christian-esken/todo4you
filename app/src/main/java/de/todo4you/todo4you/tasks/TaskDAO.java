@@ -19,6 +19,8 @@ public class TaskDAO {
     private final static String accountsDevFileName = "accounts-dev.properties";
 
     private static TaskDAO instance;
+    final int accountId = 1;
+    private Exception lastUpstreamException = null;
 
     private TaskDAO() {
     };
@@ -44,7 +46,6 @@ public class TaskDAO {
     }
 
     protected List<Todo> load(int minusDays, int plusDays, boolean alsoCompleted) throws Exception {
-        int accountId = 1;
         CalendarConnector connector = createConnector(accountId);
 
         LocalDate now = LocalDate.now();
@@ -97,4 +98,14 @@ public class TaskDAO {
         return conn;
     }
 
+    public boolean add(Todo task) {
+        CalendarConnector connector = null;
+        try {
+            connector = createConnector(accountId);
+            return connector.add(task);
+        } catch (Exception e) {
+            lastUpstreamException = e;
+            return false;
+        }
+    }
 }
