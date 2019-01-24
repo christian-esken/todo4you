@@ -75,6 +75,7 @@ class VTodoCalDAVCollection extends CalDAVCollection {
         for (Object o : clist){
             VToDo curEvent = (VToDo) o;
             String curUid = getUIDValue(curEvent);
+            // Checking RECURRENCE_ID does not hurt, but may not be sensible on a VTODO.
             if (uid.equals(curUid) && !hasProperty(curEvent, Property.RECURRENCE_ID) ){
                 return curEvent;
             }
