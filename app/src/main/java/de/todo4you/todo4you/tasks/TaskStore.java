@@ -16,11 +16,30 @@ public class TaskStore extends Thread {
     List<Todo> unsyncedTasks = new ArrayList<>();
 
     private volatile boolean running = true;
+    private volatile boolean upstreamSync = false;
+
 
     public StoreResult getAll() {
         StoreResult mergedResult = new StoreResult(storeResult.getTodos(), storeResult.getStatus(), storeResult.getUserErrorMessaage(), storeResult.getException());
         mergedResult.addUnsyncedTodos(unsyncedTasks);
         return mergedResult;
+    }
+
+    public Todo getByUid(String uid) {
+        if (uid == null) {
+            return null;
+        }
+        Todo todo = storeResult.getByUid(uid);
+        if (todo != null) {
+            return todo;
+        }
+
+        for (Todo todo1 : unsyncedTasks) {
+            if (uid.equals(todo1.getUid())) {
+                return todo1;
+            }
+        }
+        return null;
     }
 
     public static final synchronized TaskStore instance() {
@@ -102,6 +121,14 @@ public class TaskStore extends Thread {
                     }
                 }
 
+                if (upstreamSync) {
+                    upstreamSync = false;
+                    // On a specific upstream-only-sync, we do not reload data.
+                    // Informing the listeners is also not done, as all changes
+                    // are already locally known.
+                    continue;
+                }
+
                 // -3- Load everything new
                 StoreResult todosLoaded = taskDao.loadAll();
                 todosLoaded.addUnsyncedTodos(unsyncedTasks);
@@ -128,7 +155,7 @@ public class TaskStore extends Thread {
                 continue;
             }
             try {
-                Thread.sleep(6000);
+                Thread.sleep(1000 * 5 * 60); // update all 5 minutes
             } catch (InterruptedException e) {
                 continue;
             }
@@ -193,9 +220,38 @@ public class TaskStore extends Thread {
         this.interrupt();
     }
 
+    /**
+     * Informs this TaskStore that an existing task was modified. This method must be
+     * called whenever any data field in the To Do was modified. This method ensures
+     * that all registered Listeners are informed and that the modified task will be
+     * upstream-synced on the next occasion. If the given task does not exist in this
+     * TaskStore, this method returns without any action.
+     * @param task The modified task. It must be known in this TaskStore.
+     */
+    public void taskModifed(Todo task) {
+        Todo todoFromStore = getByUid(task.getUid());
+        if (todoFromStore != null) {
+            // Inform the listeners if we know the UID. Even if it is a different
+            // To do instance, as identity is defined by UID.
+            informListeners();
+            triggerUpstreamSync();
+        }
+    }
+
     public void addNewTask(Todo task) {
         unsyncedTasks.add(task); // For next refresh
         storeResult.addUnsyncedTodo(task); // For now
         informListeners();
+        triggerUpstreamSync();
+    }
+
+    public void refresh() {
+        // Just interrupt. Usually the thread is currently in Thread.sleep(...).
+        this.interrupt();
+    }
+
+    private void triggerUpstreamSync() {
+        upstreamSync = true;
+        this.interrupt();
     }
 }
