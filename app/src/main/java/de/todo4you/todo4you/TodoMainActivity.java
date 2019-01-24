@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
+import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.view.Menu;
@@ -20,6 +21,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import de.todo4you.todo4you.tasks.TaskSelector;
+import de.todo4you.todo4you.tasks.TaskStore;
 
 public class TodoMainActivity extends AppCompatActivity implements AdapterView.OnItemClickListener {
     TaskSelector ts = null;
@@ -27,6 +29,7 @@ public class TodoMainActivity extends AppCompatActivity implements AdapterView.O
     ArrayAdapter<String> tasklistAdapter = null;
     TextView highlightedTextView = null;
     TextView highlightedInfoTextView = null;
+    SwipeRefreshLayout pullToRefresh = null;
 
 
     @Override
@@ -44,13 +47,30 @@ public class TodoMainActivity extends AppCompatActivity implements AdapterView.O
 
         taskListView = findViewById(R.id.listView);
         taskListView.setAdapter(tasklistAdapter);
+
         highlightedTextView = findViewById(R.id.highlightedTask);
         highlightedInfoTextView = findViewById(R.id.highlightedTaskInfo);
 
         taskListView.setItemsCanFocus(true);
         taskListView.setOnItemClickListener(this);
 
-        ts = new TaskSelector(this);
+        pullToRefresh = findViewById(R.id.pullToRefresh);
+        pullToRefresh.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
+                                               int refreshcounter = 1; //Counting how many times user have refreshed the layout
+
+                                               @Override
+                                               public void onRefresh() {
+                                                   refreshcounter++;
+                                                   TaskStore.instance().refresh();
+                                               }
+                                           });
+
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                pullToRefresh.setRefreshing(true);
+            }
+        });
 
 
         FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.add_task_button);
@@ -80,6 +100,11 @@ public class TodoMainActivity extends AppCompatActivity implements AdapterView.O
                 }
             }
         });
+
+        // TaskSelector should be created at the end. It does a lot fancy stuff like registering
+        // listeners and also has a reference to this View.
+        ts = new TaskSelector(this);
+
     }
 
 
@@ -142,5 +167,9 @@ public class TodoMainActivity extends AppCompatActivity implements AdapterView.O
         }
 
         return super.onOptionsItemSelected(item);
+    }
+
+    public SwipeRefreshLayout pullToRefresh() {
+        return pullToRefresh;
     }
 }

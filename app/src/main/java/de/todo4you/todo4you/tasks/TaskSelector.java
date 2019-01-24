@@ -6,7 +6,6 @@ import android.widget.TextView;
 
 import java.time.LocalDate;
 import java.util.Arrays;
-import java.util.Comparator;
 import java.util.List;
 
 import de.todo4you.todo4you.TodoMainActivity;
@@ -59,7 +58,6 @@ public class TaskSelector implements StoreUpdateNotifier {
 
     @Override
     public void update(StoreResult storeResult) {
-
         // TODO currentPollHasIssues should warn the user if error remains for a longer time.
         boolean currentPollHasIssues = storeResult.getStatus() == StoreState.ERROR;
 
@@ -152,6 +150,7 @@ public class TaskSelector implements StoreUpdateNotifier {
                     adapter.clear();
                     adapter.addAll(newMessages);
                 }
+                activity.pullToRefresh().setRefreshing(false);
             }
         });
     }

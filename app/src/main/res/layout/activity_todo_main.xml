@@ -130,6 +130,10 @@
 
         </android.support.constraint.ConstraintLayout>
 
+        <android.support.v4.widget.SwipeRefreshLayout
+            android:id="@+id/pullToRefresh"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
         <ListView
             android:id="@+id/listView"
             android:layout_width="wrap_content"
@@ -145,6 +149,9 @@
             app:layout_constraintVertical_bias="0.0">
 
         </ListView>
+
+        </android.support.v4.widget.SwipeRefreshLayout>
+
     </LinearLayout>
 
 </android.support.design.widget.CoordinatorLayout>
