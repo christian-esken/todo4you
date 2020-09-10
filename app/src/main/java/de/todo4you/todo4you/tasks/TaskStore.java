@@ -155,7 +155,7 @@ public class TaskStore extends Thread {
                 continue;
             }
             try {
-                Thread.sleep(1000 * 5 * 60); // update all 5 minutes
+                Thread.sleep(1000 * 15 * 60); // update all 15 minutes
             } catch (InterruptedException e) {
                 continue;
             }
