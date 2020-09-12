@@ -24,6 +24,13 @@ import java.util.function.Function;
 import de.todo4you.todo4you.util.StandardDates;
 import de.todo4you.todo4you.util.UidFactory;
 
+/**
+ * The internal model for a Todo. It holds all information like title, description, status and
+ * associated dates.
+ * TODO The model works with dates only, discarding the time component. The time component is
+ * usually preserved, but gets lost when this Todo is persisted (to the calendar) after
+ * modification from the user.
+ */
 public class Todo {
     //public static final Logger logger = LoggerFactory.getLogger(Todo.class);
     private static final String PROP_X_TODO4YOU_STARS = "x-todo4you-stars";

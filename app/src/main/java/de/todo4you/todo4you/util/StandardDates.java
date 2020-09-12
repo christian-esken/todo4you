@@ -14,6 +14,16 @@ public class StandardDates {
     static ZoneId userZone = ZoneId.systemDefault();
     static long DUE_SOON_DAYS = 7;
 
+    /**
+     * Compares dates null-safe. A date that is null is considered to be very far in the future
+     * and thus after the other date. The reason for this are user expectations: Lets presume that a
+     * user has not set a due date or start date on the first Todo, but on the second he has. Then he
+     * likely wants to sort see the second todo before the first one.
+     *
+     * @param ld1 date 1
+     * @param ld2 date 2
+     * @return -1 if ld1 is before ld2, +1 if it is after ld2. See method description for null handling.
+     */
     public static int compare(LocalDate ld1, LocalDate ld2) {
         if (ld1 == null && ld2 == null) {
             return 0;

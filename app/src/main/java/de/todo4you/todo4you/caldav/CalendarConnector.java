@@ -7,7 +7,7 @@ import java.util.List;
 
 import de.todo4you.todo4you.model.Todo;
 
-public interface CalendarConnector {
+public interface CalendarConnector extends AutoCloseable {
     List<Todo> get(LocalDate fromDate, LocalDate toDate, boolean onlyActive) throws Exception;
     boolean add(Todo task) throws CalDAV4JException;
     boolean update(Todo task) throws CalDAV4JException;

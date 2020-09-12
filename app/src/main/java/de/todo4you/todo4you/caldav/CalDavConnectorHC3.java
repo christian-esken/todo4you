@@ -59,7 +59,10 @@ public class CalDavConnectorHC3 implements CalendarConnector {
         GenerateQuery gq = new GenerateQuery(); // gq.prettyPrint();
         int from = toDay(fromDate);
         int to = toDay(toDate);
-        gq.setFilter("VTODO [" + from + "T000000Z;" + to + "T235959Z] : STATUS!=CANCELLED");
+
+        String statusFiler = onlyActive ? " : STATUS!=CANCELLED ,  STATUS!=COMPLETED" : "";
+        //  qg.setFilter("VEVENT [start;end] : UID==value1 , DTSTART==[start;end], DESCRIPTION==UNDEF, SUMMARY!=not my summary,")
+        gq.setFilter("VTODO [" + from + "T000000Z;" + to + "T235959Z]" + statusFiler);
 
         CalendarQuery calendarQuery = gq.generate();
         List<Calendar> calendars = collection.queryCalendars(httpClient, calendarQuery);
@@ -140,5 +143,11 @@ public class CalDavConnectorHC3 implements CalendarConnector {
 
     private int toDay(LocalDate date) {
         return 10000 * date.get(ChronoField.YEAR) + 100 * date.get(ChronoField.MONTH_OF_YEAR) + date.get(ChronoField.DAY_OF_MONTH);
+    }
+
+    @Override
+    public void close() throws Exception {
+        // Nothing to close. The underlying HttpClient from getHttpClient() haa not close()
+        // method, that could potentially close an internal HttpConnectionManager.
     }
 }

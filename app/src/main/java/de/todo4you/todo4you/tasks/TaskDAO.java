@@ -35,7 +35,7 @@ public class TaskDAO {
 
     public StoreResult loadAll() {
         boolean alsoCompleted = false;
-        int minusDays = 100;
+        int minusDays = 1000;
         int plusDays = 100;
         try {
             List<Todo> todosLoaded = load(minusDays, plusDays, alsoCompleted);
@@ -52,6 +52,11 @@ public class TaskDAO {
         List<Todo> todosComplete = new ArrayList<>();
         List<Todo> todosNew = connector.get(now.minusDays(minusDays), now.plusDays(plusDays), !alsoCompleted);
         for (Todo todo : todosNew) {
+            // Maybe remove the alsoCompleted check here. It has moved to the Connector.
+            // This needs refinement. How will the user then see his heroicly completed tasks if
+            // we do not load them? Also we keep them in memory after a usere marked it as complete.
+            // Probably we want to keep the "recently completed" tasks in memory. Or have two
+            // task lists: Active (to select the 1 task from) and inactive (completed, canceled).
             if (alsoCompleted || todo.getCompletionState() != CompletionState.COMPLETED) {
                 todosComplete.add(todo);
             }
