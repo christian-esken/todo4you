@@ -40,7 +40,7 @@ public class TaskSelector implements StoreUpdateNotifier {
         return TaskStore.instance();
     }
 
-    enum ActionType {
+    public enum ActionType {
         NONE,
         START, // start time reached
         DUE, // due date today
@@ -114,48 +114,16 @@ public class TaskSelector implements StoreUpdateNotifier {
     }
 
     private void refreshCompleteArea(final Todo todoHighlight, String[] newMessages) {
-        Todo thl = todoHighlight;
         activity.runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                final TextView highlightedTextView = activity.getHighlightedTextView();
-                final TextView highlightedInfoTextView = activity.getHighlightedInfoTextView();
-                final TextView highlightedInfoDescTextView = activity.getHighlightedInfoDescTextView();
-                if (thl != null) {
-                    String prefixMessage = StandardDates.localDateToReadableString(thl.getAttentionDate());
-                    highlightedTextView.setText(thl.getSummary());
-                    highlightedInfoTextView.setText(prefixMessage);
-                    highlightedTextView.setBackgroundColor(Color.LTGRAY);
-
-                    highlightedInfoDescTextView.setText(thl.getDescription());
-
-                    ActionType actionType = determineAction(thl);
-                    int color = Color.LTGRAY;
-                    if (actionType == ActionType.DUE) {
-                        color = Color.YELLOW;
-                    } else if (actionType == ActionType.OVERDUE) {
-                        color = Color.RED;
-                    }
-                    highlightedInfoTextView.setBackgroundColor(color);
-                } else {
-                    highlightedTextView.setText("No tasks. Add one with the + button");
-                    highlightedInfoTextView.setText("");
-                    highlightedInfoDescTextView.setText("");
-                    highlightedTextView.setBackgroundColor(0xFF666666);
-                    highlightedInfoTextView.setBackgroundColor(0xFF666666);
-                }
-
-                if (newMessages != null) {
-                    final ArrayAdapter<String> adapter = activity.getTaskListViewAdapter();
-                    adapter.clear();
-                    adapter.addAll(newMessages);
-                }
-                activity.pullToRefresh().setRefreshing(false);
+                activity.fullRefresh(todoHighlight, newMessages);
             }
         });
     }
 
-    private List<Todo> sortTodos(List<Todo> todos) {
+    // Helper method. Can be moved
+    public static List<Todo> sortTodos(List<Todo> todos) {
         Todo[] todosArray = todos.toArray(new Todo[todos.size()]);
         Arrays.sort(todosArray, new StandardTodoComparator());
 
@@ -169,20 +137,6 @@ public class TaskSelector implements StoreUpdateNotifier {
         return actionType.name();
     }
 
-    private ActionType determineAction(Todo todo) {
-        StandardDates.Name dueName = StandardDates.dateToName(todo.getDueDate());
-        if (dueName.isDue()) {
-            return dueName == StandardDates.Name.OVERDUE ? ActionType.OVERDUE : ActionType.DUE;
-        } else {
-            StandardDates.Name startName = StandardDates.dateToName(todo.getStartDate());
-            if (startName.isDue()) {
-                return ActionType.START;
-            }
-        }
-        return ActionType.NONE;
-    }
-
-
     private String determineWhenToDo(Todo todo) {
         LocalDate attentionDate = todo.getAttentionDate();
         if (attentionDate != null) {
@@ -192,4 +146,16 @@ public class TaskSelector implements StoreUpdateNotifier {
         return "UNSCHEDULED";
     }
 
+    public static TaskSelector.ActionType determineAction(Todo todo) {
+        StandardDates.Name dueName = StandardDates.dateToName(todo.getDueDate());
+        if (dueName.isDue()) {
+            return dueName == StandardDates.Name.OVERDUE ? TaskSelector.ActionType.OVERDUE : TaskSelector.ActionType.DUE;
+        } else {
+            StandardDates.Name startName = StandardDates.dateToName(todo.getStartDate());
+            if (startName.isDue()) {
+                return TaskSelector.ActionType.START;
+            }
+        }
+        return TaskSelector.ActionType.NONE;
+    }
 }

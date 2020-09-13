@@ -1,7 +1,9 @@
 package de.todo4you.todo4you;
 
 import android.content.Intent;
+import android.graphics.Color;
 import android.os.Bundle;
+import android.support.annotation.Nullable;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v4.widget.SwipeRefreshLayout;
@@ -20,10 +22,12 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import de.todo4you.todo4you.model.Todo;
 import de.todo4you.todo4you.tasks.TaskSelector;
 import de.todo4you.todo4you.tasks.TaskStore;
+import de.todo4you.todo4you.util.StandardDates;
 
-public class TodoMainActivity extends AppCompatActivity implements AdapterView.OnItemClickListener {
+public class TodoMainActivity extends AppCompatActivity implements AdapterView.OnItemClickListener, RefreshTasksCallback {
     TaskSelector ts = null;
     ListView taskListView = null;
     ArrayAdapter<String> tasklistAdapter = null;
@@ -39,9 +43,9 @@ public class TodoMainActivity extends AppCompatActivity implements AdapterView.O
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
-        String messages[] = {"Loading Tasks" };
+        String[] messages = {"Loading Tasks" };
         List<String> msgList = new ArrayList<>(Arrays.asList(messages));
-        tasklistAdapter = new ArrayAdapter<String>(this,
+        tasklistAdapter = new ArrayAdapter<>(this,
                 android.R.layout.simple_list_item_1, msgList);
 
 
@@ -65,12 +69,7 @@ public class TodoMainActivity extends AppCompatActivity implements AdapterView.O
                                                }
                                            });
 
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                pullToRefresh.setRefreshing(true);
-            }
-        });
+        runOnUiThread(() -> pullToRefresh.setRefreshing(true));
 
 
         FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.add_task_button);
@@ -100,6 +99,22 @@ public class TodoMainActivity extends AppCompatActivity implements AdapterView.O
                 }
             }
         });
+
+        ImageButton highlightLikeButton = findViewById(R.id.highlightLike);
+        highlightLikeButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Intent myIntent = new Intent(TodoMainActivity.this, OneTaskActivity.class);
+                if (highlightedTextView == null) {
+                    Snackbar.make(view, "Please select a task before switching to one-task mode.", Snackbar.LENGTH_LONG)
+                            .setAction("Action", null).show();
+                } else {
+                    myIntent.putExtra("taskRef", highlightedTextView.getText()); //Optional parameters
+                    TodoMainActivity.this.startActivity(myIntent);
+                }
+            }
+        });
+
 
         // TaskSelector should be created at the end. It does a lot fancy stuff like registering
         // listeners and also has a reference to this View.
@@ -171,5 +186,43 @@ public class TodoMainActivity extends AppCompatActivity implements AdapterView.O
 
     public SwipeRefreshLayout pullToRefresh() {
         return pullToRefresh;
+    }
+
+    @Override
+    public void fullRefresh(@Nullable Todo thl, String[] newMessages) {
+        TodoMainActivity activity = this;
+        final TextView highlightedTextView = activity.getHighlightedTextView();
+        final TextView highlightedInfoTextView = activity.getHighlightedInfoTextView();
+        final TextView highlightedInfoDescTextView = activity.getHighlightedInfoDescTextView();
+        if (thl != null) {
+            String prefixMessage = StandardDates.localDateToReadableString(thl.getAttentionDate());
+            highlightedTextView.setText(thl.getSummary());
+            highlightedInfoTextView.setText(prefixMessage);
+            highlightedTextView.setBackgroundColor(Color.LTGRAY);
+
+            highlightedInfoDescTextView.setText(thl.getDescription());
+
+            TaskSelector.ActionType actionType = TaskSelector.determineAction(thl);
+            int color = Color.LTGRAY;
+            if (actionType == TaskSelector.ActionType.DUE) {
+                color = Color.YELLOW;
+            } else if (actionType == TaskSelector.ActionType.OVERDUE) {
+                color = Color.RED;
+            }
+            highlightedInfoTextView.setBackgroundColor(color);
+        } else {
+            highlightedTextView.setText("No tasks. Add one with the + button");
+            highlightedInfoTextView.setText("");
+            highlightedInfoDescTextView.setText("");
+            highlightedTextView.setBackgroundColor(0xFF666666);
+            highlightedInfoTextView.setBackgroundColor(0xFF666666);
+        }
+
+        if (newMessages != null) {
+            final ArrayAdapter<String> adapter = activity.getTaskListViewAdapter();
+            adapter.clear();
+            adapter.addAll(newMessages);
+        }
+        activity.pullToRefresh().setRefreshing(false);
     }
 }
