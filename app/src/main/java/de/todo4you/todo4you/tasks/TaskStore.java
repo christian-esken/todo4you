@@ -14,6 +14,7 @@ public class TaskStore extends Thread {
     volatile StoreResult storeResult = StoreResult.loading();
     List<StoreUpdateNotifier> listeners = new CopyOnWriteArrayList<>();
     List<Todo> unsyncedTasks = new ArrayList<>();
+    Todo highlightTodo;
 
     private volatile boolean running = true;
     private volatile boolean upstreamSync = false;
@@ -42,6 +43,10 @@ public class TaskStore extends Thread {
         return null;
     }
 
+    public Todo getHighlightTodo() {
+        return highlightTodo;
+    }
+
     public static final synchronized TaskStore instance() {
         if (instance == null) {
             instance = new TaskStore();
@@ -54,10 +59,10 @@ public class TaskStore extends Thread {
     {
         setName("TaskStoreUpdater");
     }
-    void registerListener(StoreUpdateNotifier obj) {
+    public void registerListener(StoreUpdateNotifier obj) {
         listeners.add(obj);
     }
-    void unregisterListener(StoreUpdateNotifier obj) {
+    public void unregisterListener(StoreUpdateNotifier obj) {
         listeners.remove(obj);
     }
 
@@ -114,7 +119,7 @@ public class TaskStore extends Thread {
                         if (todo.updateVTodoFromModel()) {
                             // really modified (not a A-B-A reverting change)
                             if (taskDao.update(todo)) {
-                                // succesfully synced back
+                                // successfully synced back
                                 todo.setDirty(false);
                             }
                         }
@@ -253,5 +258,19 @@ public class TaskStore extends Thread {
     private void triggerUpstreamSync() {
         upstreamSync = true;
         this.interrupt();
+    }
+
+    public void setHighlightTodo(Todo todo) {
+        if (todo != highlightTodo) {
+            // modified
+            for (StoreUpdateNotifier listener : listeners) {
+                highlightTodo = todo;
+                synchronized (listener) {
+                    // Use the method parameter, as the field could concurrently change
+                    // We do not yet do specific thread-safety here, e.g. DCL or AtomicReference.
+                    listener.updateHighlight(todo);
+                }
+            }
+        }
     }
 }
