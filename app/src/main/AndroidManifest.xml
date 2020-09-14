@@ -2,8 +2,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="de.todo4you.todo4you">
 
-    <uses-permission android:name="android.permission.INTERNET" />
-
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
@@ -11,6 +9,17 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
+        <activity
+            android:name=".OneTaskActivity"
+            android:label="@string/title_activity_one_task"
+            android:parentActivityName=".TodoMainActivity"
+            android:theme="@style/AppTheme.NoActionBar">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
         <activity
             android:name=".TodoMainActivity"
             android:label="@string/app_name"
@@ -25,16 +34,18 @@
             android:label="@string/title_activity_add_task"
             android:parentActivityName=".TodoMainActivity"
             android:theme="@style/AppTheme.NoActionBar">
-            <meta-data
-                android:name="android.support.PARENT_ACTIVITY"
-                android:value="de.todo4you.todo4you.TodoMainActivity" />
-
             <intent-filter>
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="de.todo4you.todo4you.TodoMainActivity" />
         </activity>
         <activity android:name=".QuickSortActivity" />
-        <activity android:name=".EditTask"></activity>
+        <activity android:name=".EditTask" />
     </application>
+
+    <uses-permission android:name="android.permission.INTERNET" />
 
 </manifest>

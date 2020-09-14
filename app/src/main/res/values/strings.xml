@@ -4,4 +4,5 @@
     <string name="edit_task">Edit task</string>
     <string name="star_task">Set stars</string>
     <string name="title_activity_add_task">Add new task</string>
+    <string name="title_activity_one_task">OneTaskActivity</string>
 </resources>
