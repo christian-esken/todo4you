@@ -21,6 +21,7 @@ import java.time.ZoneOffset;
 import java.util.Date;
 import java.util.function.Function;
 
+import de.todo4you.todo4you.storage.DataOrigin;
 import de.todo4you.todo4you.util.StandardDates;
 import de.todo4you.todo4you.util.UidFactory;
 
@@ -36,12 +37,12 @@ public class Todo {
     private static final String PROP_X_TODO4YOU_STARS = "x-todo4you-stars";
     private static final String PROP_X_TODO4YOU_FAVORITE = "x-todo4you-favorite";
 
-    volatile VToDo vtodo;
+    volatile VToDo vtodo; // Hardcoded to ical4j at the moment
 
     private final String uid; // An UID should never change => final!
     volatile String summary;
     volatile String description;
-    volatile CompletionState completionState = CompletionState.NEEDS_ACTION;
+    volatile CompletionState completionState = CompletionState.NEW;
     volatile int stars = 0;
     volatile boolean favorite = false;
     volatile TodoState todoState = TodoState.UNINITIALIZED;
@@ -50,12 +51,15 @@ public class Todo {
     LocalDate completionDate = null;
     volatile boolean dirty = false;
 
+    volatile boolean inSyncWithDeviceStore = false;
+    volatile boolean inSyncWithCloudStore = false;
+
     /**
      * Creates an instance from a backing VTodo. The VTodo is converted into the internal model.
      *
      * @param vtodo The backing VTodo
      */
-    public Todo(VToDo vtodo) {
+    public Todo(VToDo vtodo, DataOrigin dataOrigin) {
         this.vtodo = vtodo;
         this.completionState = fromLibToModel(vtodo.getStatus());
 
@@ -78,23 +82,34 @@ public class Todo {
         this.dueDate = due == null ? null : StandardDates.dateToLocalDate(due.getDate());
         Completed completed = vtodo.getDateCompleted();
         this.completionDate = completed == null ? null : StandardDates.dateToLocalDate(completed.getDate());
+        insyncByOrigin(dataOrigin);
     }
-
     /**
      * Creates a new instance without backing VTodo. The latter will be created on an upstream sync.
      */
     public Todo(String summary) {
         this.summary = summary;
         vtodo = null; // invalid
-        this.completionState = CompletionState.NEEDS_ACTION;
+        this.completionState = CompletionState.NEW;
         todoState = TodoState.FRESHLY_CREATED;
         uid = UidFactory.instance().produceNewUid();
 
         stars = 0;
         favorite = false;
         dirty = true;
+        insyncByOrigin(DataOrigin.NewlyCreated);
     }
 
+
+    private void insyncByOrigin(DataOrigin dataOrigin) {
+        this.inSyncWithCloudStore = dataOrigin == DataOrigin.CloudStore;
+        this.inSyncWithDeviceStore = dataOrigin == DataOrigin.DeviceStore;
+    }
+
+    private void insyncReset(boolean inSyncWithCloudstore) {
+        this.inSyncWithCloudStore = inSyncWithCloudstore;
+        this.inSyncWithDeviceStore = false;
+    }
 
     private boolean fromBooleanPropertyToModel(Property property, boolean defaultValue) {
         if (property == null) {
@@ -149,9 +164,9 @@ public class Todo {
             case "COMPLETED":
                 return CompletionState.COMPLETED;
             case "IN-PROCESS":
-                return CompletionState.IN_PROCESS;
+                return CompletionState.IN_PROGRESS;
             case "NEEDS-ACTION":
-                return CompletionState.NEEDS_ACTION;
+                return CompletionState.NEW;
             case "CANCELLED":
                 return CompletionState.CANCELLED;
             // Hint: Status is an optional field, thus
@@ -253,12 +268,12 @@ public class Todo {
             vtodo = new VToDo();
         }
         try {
-            reallyModified |= compareAndSetStringProperty(vtodo, vtodo.getUid(), uid, (cons) -> new Uid(cons));
-            reallyModified |= compareAndSetStringProperty(vtodo, vtodo.getSummary(), summary, (cons) -> new Summary(cons));
-            reallyModified |= compareAndSetStringProperty(vtodo, vtodo.getDescription(), description, (cons) -> new Description(cons));
+            reallyModified |= compareAndSetStringProperty(vtodo, vtodo.getUid(), uid, cons -> new Uid(cons));
+            reallyModified |= compareAndSetStringProperty(vtodo, vtodo.getSummary(), summary, cons -> new Summary(cons));
+            reallyModified |= compareAndSetStringProperty(vtodo, vtodo.getDescription(), description, cons -> new Description(cons));
 
-            reallyModified |= compareAndSetDateProperty(vtodo, vtodo.getDue(), dueDate, (cons) -> new Due(cons));
-            reallyModified |= compareAndSetDateProperty(vtodo, vtodo.getStartDate(), startDate, (cons) -> new DtStart(cons));
+            reallyModified |= compareAndSetDateProperty(vtodo, vtodo.getDue(), dueDate, cons -> new Due(cons));
+            reallyModified |= compareAndSetDateProperty(vtodo, vtodo.getStartDate(), startDate, cons -> new DtStart(cons));
 
             //Completed requires a DateTime, so we cannot use the  compareAndSetDateProperty()
             //reallyModified |= compareAndSetDateProperty(vtodo, vtodo.getDateCompleted(), completionDate, (cons) -> new Completed(cons));
@@ -282,6 +297,7 @@ public class Todo {
         }
 
         dirty = reallyModified;
+        insyncReset(!dirty);
         return reallyModified;
     }
 
@@ -405,4 +421,15 @@ public class Todo {
         return dirty;
     }
 
+    public boolean needsDeviceSync() {
+        return !inSyncWithDeviceStore;
+    }
+
+    public boolean needsCloudSync() {
+        return !inSyncWithCloudStore;
+    }
+
+    public void setCloudSynced() {
+        inSyncWithCloudStore = true;
+    }
 }

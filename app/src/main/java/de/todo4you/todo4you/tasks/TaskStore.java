@@ -1,51 +1,38 @@
 package de.todo4you.todo4you.tasks;
 
+import android.support.annotation.GuardedBy;
+
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import de.todo4you.todo4you.model.Todo;
+import de.todo4you.todo4you.storage.StorageStatistics;
 import de.todo4you.todo4you.util.StoreUpdateNotifier;
 
+/**
+ * The TaskStore holds all tasks and is responsible to sync between all three targets:
+ * The in-memory representation in this TaskStore, the device DB, the cloud storage.
+ */
 public class TaskStore extends Thread {
 
+    public static final long FIFTEEN_MINUTES_IN_MS = 30000; // 1000 * 15 * 60;
+    public static final long MINIMUM_WAIT_IN_MS = 10000; // Wait at least 10 seconds
+    @GuardedBy("TaskStore.class")
     private static TaskStore instance;
-    volatile StoreResult storeResult = StoreResult.loading();
     List<StoreUpdateNotifier> listeners = new CopyOnWriteArrayList<>();
-    List<Todo> unsyncedTasks = new ArrayList<>();
-    Todo highlightTodo;
+
+    // Migrate the following 2 back to StoreResult ?!?
+    List<Todo> ideas = new ArrayList<>();
+    StoreStatus status = StoreStatus.loading;
+
+    Todo highlightTodo; // TODO move this field somewhere else.
 
     private volatile boolean running = true;
     private volatile boolean upstreamSync = false;
+    private volatile boolean downstreamSync = false;
 
-
-    public StoreResult getAll() {
-        StoreResult mergedResult = new StoreResult(storeResult.getTodos(), storeResult.getStatus(), storeResult.getUserErrorMessaage(), storeResult.getException());
-        mergedResult.addUnsyncedTodos(unsyncedTasks);
-        return mergedResult;
-    }
-
-    public Todo getByUid(String uid) {
-        if (uid == null) {
-            return null;
-        }
-        Todo todo = storeResult.getByUid(uid);
-        if (todo != null) {
-            return todo;
-        }
-
-        for (Todo todo1 : unsyncedTasks) {
-            if (uid.equals(todo1.getUid())) {
-                return todo1;
-            }
-        }
-        return null;
-    }
-
-    public Todo getHighlightTodo() {
-        return highlightTodo;
-    }
 
     public static final synchronized TaskStore instance() {
         if (instance == null) {
@@ -53,6 +40,37 @@ public class TaskStore extends Thread {
             instance.start();
         }
         return instance;
+    }
+
+    public StoreResult getAll() {
+        return new StoreResult(ideas, status);
+    }
+
+    public Todo getByUid(String ruid) {
+        if (ruid == null) {
+            return null;
+        }
+        for (Todo todo : ideas) {
+            if (ruid.equals(todo.getUid())) {
+                return todo;
+            }
+        }
+        return null;
+    }
+
+    public TaskStoreStatistics statistics() {
+        int iCount = ideas.size();
+        StorageStatistics memory = new StorageStatistics("App", true, iCount, iCount);
+        int cCount = (int)ideas.stream().filter(i -> !i.needsCloudSync()).count();
+        StorageStatistics cloud = new StorageStatistics("Cloud", true, iCount, cCount);
+        int dCount = (int)ideas.stream().filter(i -> !i.needsDeviceSync()).count();
+        StorageStatistics device = new StorageStatistics("AppDB", true, 0, dCount);
+
+        return new TaskStoreStatistics(memory, cloud, device);
+    }
+
+    public Todo getHighlightTodo() {
+        return highlightTodo;
     }
 
     TaskStore()
@@ -72,7 +90,7 @@ public class TaskStore extends Thread {
             return null;
         }
         String taskDescription = (String)taskObject;
-        for (Todo todo : storeResult.getTodos()) {
+        for (Todo todo : ideas) {
             if (todo.getSummary().isEmpty()) {
                 continue; // no summary
             }
@@ -84,88 +102,62 @@ public class TaskStore extends Thread {
                 return todo;
             }
         }
-
-        for (Todo todo : unsyncedTasks) {
-            if (todo.getSummary().isEmpty()) {
-                continue; // no summary
-            }
-            if (taskDescription.startsWith(todo.getSummary())) {
-                return todo;
-            }
-        }
-
         return null;
     }
 
     @Override
     public void run() {
+        long nextDownstreamSync = 0;
         while (running) {
             try {
                 TaskDAO taskDao = TaskDAO.instance();
-                // -1- upstream-sync NEW tasks
-                Iterator<Todo> iterator = unsyncedTasks.iterator();
+                // -1- upstream-sync NEW ideas and MODIFIED ideas
+                Iterator<Todo> iterator = ideas.iterator();
                 while (iterator.hasNext()) {
-                    Todo unsyncedTask = iterator.next();
-                    unsyncedTask.updateVTodoFromModel();
-                    if (taskDao.add(unsyncedTask)) {
-                        unsyncedTask.setDirty(false);
-                        iterator.remove();
+                    Todo idea = iterator.next();
+                    if (idea.needsDeviceSync()) {
+                        // TODO implement wrting to SQLite here
                     }
-                }
-
-                // -2- upstream-sync MODIFIED tasks
-                for (Todo todo : storeResult.getTodos()) {
-                    if (todo.isDirty()) {
-                        if (todo.updateVTodoFromModel()) {
-                            // really modified (not a A-B-A reverting change)
-                            if (taskDao.update(todo)) {
-                                // successfully synced back
-                                todo.setDirty(false);
-                            }
+                    if (idea.needsCloudSync()) {
+                        idea.updateVTodoFromModel();
+                        if (taskDao.add(idea)) {
+                            idea.setCloudSynced();
                         }
                     }
                 }
 
-                if (upstreamSync) {
-                    upstreamSync = false;
-                    // On a specific upstream-only-sync, we do not reload data.
-                    // Informing the listeners is also not done, as all changes
-                    // are already locally known.
-                    continue;
-                }
-
-                // -3- Load everything new
-                StoreResult todosLoaded = taskDao.loadAll();
-                todosLoaded.addUnsyncedTodos(unsyncedTasks);
-
-                // -4- Set new storeResult, merging local and remote stores
-                if (todosLoaded.getStatus() == StoreState.LOADED) {
-                    // everything loaded well => merge in changes
-                    storeResult = merge(storeResult, todosLoaded);
+                // TODO Trigger sleep here if we did not reach the time for doing the downstream sync.
+                long now = System.currentTimeMillis();
+                if (downstreamSync || now >= nextDownstreamSync) {
+                    // downstreamSync can be triggered by a reload gesture
+                    downstreamSync = false;
+                    nextDownstreamSync = now + FIFTEEN_MINUTES_IN_MS;
+                    // -2- Load everything new
+                    // Note: This should be time triggered
+                    StoreResult todosLoaded = taskDao.loadAll();
+                    status = todosLoaded.getStatus();
+                    merge(todosLoaded); // merge in everything you got (so far)
                     informListeners();
-
-                } else {
-                    // ERROR => keep the old todos. Might be just a network disconnect
-                    StoreResult mergedResult = new StoreResult(storeResult.getTodos(), todosLoaded.getStatus(), todosLoaded.getUserErrorMessaage(), todosLoaded.getException());
-                    storeResult = mergedResult;
                 }
-            } catch (Exception exc) {
-                // Unexpected exception, e.g. NPE. Still keep the old todos.
-                StoreResult mergedResult = new StoreResult(storeResult.getTodos(), StoreState.ERROR, "Error: " + exc.getMessage(), exc);
-                storeResult = mergedResult;
+            }
+            catch(Exception exc){
+                // Unexpected exception, e.g. NPE. No data recieved, but remember the error
+                status = new StoreStatus(StoreState.ERROR, "Error: " + exc.getMessage(), exc);
             }
 
-            // Interruption policy: continue, and let the loop detrmine the "running" flag
-            if (this.isInterrupted()) {
+            // Interruption policy: continue, and let the loop determine the "running" flag
+            if (upstreamSync || this.isInterrupted()) {
+                upstreamSync = false;
                 continue;
             }
             try {
-                Thread.sleep(1000 * 15 * 60); // update all 15 minutes
+                long remainingMillis = Math.max(MINIMUM_WAIT_IN_MS, nextDownstreamSync - System.currentTimeMillis());
+
+                Thread.sleep(remainingMillis); // update all 15 minutes
             } catch (InterruptedException e) {
+                // Interruption policy: continue, and let the loop determine the "running" flag
                 continue;
             }
-
-            //adapter.notifyDataSetChanged();
         }
     }
 
@@ -177,18 +169,17 @@ public class TaskStore extends Thread {
      *     Implementation hint: The merge takes precautions to not overwrite locally modified
      *     entries. This can easily happen, when merge() is called while the user edits a task.
      *
-     * @param local
      * @param remote
      * @return
      */
-    private StoreResult merge(StoreResult local, StoreResult remote) {
+    private void merge(StoreResult remote) {
         List<Todo> merged = new ArrayList<>(remote.getTodos().size());
         List<Todo> locked = new ArrayList<>();
 
         // -1- Pick all remote entries, unless a local entry is dirty (not yet synced)
         for (Todo rtodo : remote.getTodos()) {
             String ruid = rtodo.getUid();
-            Todo ltodo = local.getByUid(ruid);
+            Todo ltodo = getByUid(ruid);
             /*    ltodo  null  locked   add
              *              t       *   merged
              *              f       f   merged
@@ -206,15 +197,17 @@ public class TaskStore extends Thread {
         // -2- Pick all local dirty entries (they are modified or newly created)
         merged.addAll(locked);
 
-        StoreResult mergedResult = new StoreResult(merged, remote.getStatus(), remote.getUserErrorMessaage(), remote.getException());
-        return mergedResult;
+        status = remote.getStatus();
+        ideas = merged;
     }
 
     private void informListeners() {
+        StoreResult storeResult = new StoreResult(ideas, status);
         for (StoreUpdateNotifier listener : listeners) {
             synchronized (listener) {
                 // Quite trivially implemented update process. If used not properly, listeners
                 // may lose notifications.
+
                 listener.update(storeResult);
             }
         }
@@ -244,8 +237,7 @@ public class TaskStore extends Thread {
     }
 
     public void addNewTask(Todo task) {
-        unsyncedTasks.add(task); // For next refresh
-        storeResult.addUnsyncedTodo(task); // For now
+        ideas.add(task);
         informListeners();
         triggerUpstreamSync();
     }
@@ -260,6 +252,7 @@ public class TaskStore extends Thread {
         this.interrupt();
     }
 
+    // TODO Likely move this method somewhere else
     public void setHighlightTodo(Todo todo) {
         if (todo != highlightTodo) {
             // modified

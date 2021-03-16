@@ -26,9 +26,12 @@ import de.todo4you.todo4you.highlight.HighlightSelector;
 import de.todo4you.todo4you.highlight.RandomSelector;
 import de.todo4you.todo4you.highlight.ShortCircuitChainedSelector;
 import de.todo4you.todo4you.model.Todo;
+import de.todo4you.todo4you.storage.sqlite.SQLiteStorage;
 import de.todo4you.todo4you.tasks.StoreResult;
 import de.todo4you.todo4you.tasks.StoreState;
+import de.todo4you.todo4you.tasks.StoreStatus;
 import de.todo4you.todo4you.tasks.TaskStore;
+import de.todo4you.todo4you.tasks.TaskStoreStatistics;
 import de.todo4you.todo4you.tasks.comparator.StandardTodoComparator;
 import de.todo4you.todo4you.util.StandardDates;
 
@@ -43,6 +46,7 @@ public class TodoMainActivity extends RefreshableActivity implements AdapterView
     private HighlightSelector highlightSelector;
     private volatile Todo userHighlightedTodo;
     private TextView highlightedInfoDescTextView;
+    private SQLiteStorage localStorage;
 
     public enum ActionType {
         NONE,
@@ -57,6 +61,9 @@ public class TodoMainActivity extends RefreshableActivity implements AdapterView
         setContentView(R.layout.activity_todo_main);
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
+
+
+        localStorage = new SQLiteStorage(this);
 
         highlightSelector = new ShortCircuitChainedSelector(new DueSelector(), new RandomSelector());
 
@@ -196,23 +203,25 @@ public class TodoMainActivity extends RefreshableActivity implements AdapterView
         return pullToRefresh;
     }
 
+    static final boolean DEBUG_INFOS = true;
+
     private void fullRefresh(Todo thl, String[] newMessages) {
         runOnUiThread(() -> {
             String prefixMessage = StandardDates.localDateToReadableString(thl.getAttentionDate());
             highlightedTextView.setText(thl.getSummary());
-            highlightedInfoTextView.setText(prefixMessage);
             highlightedTextView.setBackgroundColor(Color.LTGRAY);
 
-            highlightedInfoDescTextView.setText(thl.getDescription());
+            highlightedInfoTextView.setText(prefixMessage);
+            highlightedInfoTextView.setBackgroundColor(colorFromUrgency(thl));
 
-            ActionType actionType = determineAction(thl);
-            int color = Color.LTGRAY;
-            if (actionType == ActionType.DUE) {
-                color = Color.YELLOW;
-            } else if (actionType == ActionType.OVERDUE) {
-                color = Color.RED;
+            if (DEBUG_INFOS) {
+                TaskStore taskStore = TaskStore.instance();
+                TaskStoreStatistics statistics = taskStore.statistics();
+                highlightedInfoDescTextView.setText(statistics.toString());
+            } else {
+                highlightedInfoDescTextView.setText(thl.getDescription());
             }
-            highlightedInfoTextView.setBackgroundColor(color);
+
 
             if (newMessages != null) {
                 tasklistAdapter.clear();
@@ -220,6 +229,17 @@ public class TodoMainActivity extends RefreshableActivity implements AdapterView
             }
             pullToRefresh().setRefreshing(false);
         });
+    }
+
+    private int colorFromUrgency(Todo thl) {
+        ActionType actionType = determineAction(thl);
+        int color = Color.LTGRAY;
+        if (actionType == ActionType.DUE) {
+            color = Color.YELLOW;
+        } else if (actionType == ActionType.OVERDUE) {
+            color = Color.RED;
+        }
+        return color;
     }
 
     private void updateHighlightView(String statusMessage) {
@@ -235,19 +255,20 @@ public class TodoMainActivity extends RefreshableActivity implements AdapterView
     @Override
     public void update(StoreResult storeResult) {
         // TODO currentPollHasIssues should warn the user if error remains for a longer time.
-        boolean currentPollHasIssues = storeResult.getStatus() == StoreState.ERROR;
+        //boolean currentPollHasIssues = storeResult.getStatus().status == StoreState.ERROR;
 
         Todo todoHighlight = null;
         List<Todo> todos = storeResult.getTodos();
 
         if (todos.isEmpty()) {
             // For now, handle errors only if we never load tasks successfully
-            switch (storeResult.getStatus()) {
+            StoreStatus storeStatus = storeResult.getStatus();
+            switch (storeResult.getStatus().status) {
                 case LOADING:
                     updateHighlightView("LOADING");
                     break;
                 case ERROR:
-                    updateHighlightView("ERROR");
+                    updateHighlightView("ERROR:" + storeStatus.userErrorMessaage);
                     break;
                 default:
                     // LOADED and EMPTY

@@ -10,6 +10,10 @@ import java.util.Date;
 import static de.todo4you.todo4you.util.StandardDates.Name.*;
 import static java.time.temporal.ChronoUnit.DAYS;
 
+/**
+ * Helper methods to simplify handling dates in different formats: Comparing, converting, and
+ * creating user readable names like "Today", "Next weekend"
+ */
 public class StandardDates {
     static ZoneId userZone = ZoneId.systemDefault();
     static long DUE_SOON_DAYS = 7;

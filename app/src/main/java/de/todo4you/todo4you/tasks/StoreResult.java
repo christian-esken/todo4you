@@ -1,79 +1,48 @@
 package de.todo4you.todo4you.tasks;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 import de.todo4you.todo4you.model.Todo;
 
+/**
+ * Holds the result from a store fetch
+ */
 public class StoreResult {
-    private final List<Todo> todos;
-    private final StoreState status;
-    private final String userErrorMessaage;
-    private final Exception exception;
+    private final List<Todo> ideas;
+    private final StoreStatus status;
 
     /**
      * Creates a new StoreResult. The To Do references are copied to a new list.
-     * @param todos
+     * @param ideas
      * @param storeState
      */
-    public StoreResult (List<Todo> todos, StoreState storeState) {
-        this(todos, storeState, null, null);
+    public StoreResult (List<Todo> ideas, StoreState storeState) {
+        this(ideas, new StoreStatus(storeState, null, null));
     }
 
     /**
      * Creates a new StoreResult. The To Do references are copied to a new list.
      * @param todos
      * @param status
-     * @param userErrorMessaage
+     * @param userErrorMessage
      * @param exception
      */
-    public StoreResult (List<Todo> todos, StoreState status, String userErrorMessaage, Exception exception) {
-        this.todos = new ArrayList<>(todos);
+    public StoreResult (List<Todo> todos, StoreState status, String userErrorMessage, Exception exception) {
+        this(todos, new StoreStatus(status, userErrorMessage, exception));
+    }
+
+    public StoreResult(List<Todo> ideas, StoreStatus status) {
+        this.ideas = new ArrayList<>(ideas);
         this.status = status;
-        this.userErrorMessaage = userErrorMessaage;
-        this.exception = exception;
     }
-
-    public static StoreResult loading() {
-        return new StoreResult(Collections.emptyList(), StoreState.LOADING);
-    }
-
 
     public List<Todo> getTodos() {
-        return todos;
+        return ideas;
     }
 
-    public StoreState getStatus() {
+    public StoreStatus getStatus() {
         return status;
-    }
-
-    public String getUserErrorMessaage() {
-        return userErrorMessaage;
-    }
-
-    public Exception getException() {
-        return exception;
-    }
-
-    public void addUnsyncedTodo(Todo unsyncedTask) {
-        todos.add(unsyncedTask);
-    }
-
-    public void addUnsyncedTodos(List<Todo> unsyncedTasks) {
-        todos.addAll(unsyncedTasks);
-    }
-
-    public Todo getByUid(String ruid) {
-        if (ruid == null) {
-            return null;
-        }
-        for (Todo todo : todos) {
-            if (ruid.equals(todo.getUid())) {
-                return todo;
-            }
-        }
-        return null;
     }
 }
 

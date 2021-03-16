@@ -8,9 +8,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
 
-import de.todo4you.todo4you.caldav.CalDavConnectorHC3;
-import de.todo4you.todo4you.caldav.CalendarConnector;
-import de.todo4you.todo4you.caldav.ConnectionParameters;
+import de.todo4you.todo4you.storage.caldav.CalDavConnectorHC3;
+import de.todo4you.todo4you.storage.Storage;
+import de.todo4you.todo4you.storage.caldav.ConnectionParameters;
 import de.todo4you.todo4you.model.CompletionState;
 import de.todo4you.todo4you.model.Todo;
 
@@ -39,14 +39,14 @@ public class TaskDAO {
         int plusDays = 100;
         try {
             List<Todo> todosLoaded = load(minusDays, plusDays, alsoCompleted);
-            return new StoreResult(todosLoaded, StoreState.LOADED);
+            return new StoreResult(todosLoaded, StoreStatus.loaded);
         } catch (Exception exc) {
             return new StoreResult(Collections.emptyList(), StoreState.ERROR, "Calendar error: " + exc.getMessage(), exc);
         }
     }
 
     protected List<Todo> load(int minusDays, int plusDays, boolean alsoCompleted) throws Exception {
-        CalendarConnector connector = createConnector(accountId);
+        Storage connector = createConnector(accountId);
 
         LocalDate now = LocalDate.now();
         List<Todo> todosComplete = new ArrayList<>();
@@ -54,7 +54,7 @@ public class TaskDAO {
         for (Todo todo : todosNew) {
             // Maybe remove the alsoCompleted check here. It has moved to the Connector.
             // This needs refinement. How will the user then see his heroicly completed tasks if
-            // we do not load them? Also we keep them in memory after a usere marked it as complete.
+            // we do not load them? Also we keep them in memory after a user marked it as complete.
             // Probably we want to keep the "recently completed" tasks in memory. Or have two
             // task lists: Active (to select the 1 task from) and inactive (completed, canceled).
             if (alsoCompleted || todo.getCompletionState() != CompletionState.COMPLETED) {
@@ -64,7 +64,7 @@ public class TaskDAO {
         return todosComplete;
     }
 
-    private CalendarConnector createConnector(int accountId) throws IOException {
+    private Storage createConnector(int accountId) throws IOException {
         // Primary Caldav Address
         // https://dav.example.com/owncloud/remote.php/caldav/
         // One specific calendar:
@@ -99,12 +99,12 @@ public class TaskDAO {
 
 
         ConnectionParameters connParam = new ConnectionParameters(ConnectionParameters.ServerType.GenericCaldav, host, port, protocol, path, user, password);
-        CalendarConnector conn = new CalDavConnectorHC3(connParam);
+        Storage conn = new CalDavConnectorHC3(connParam);
         return conn;
     }
 
     public boolean add(Todo task) {
-        CalendarConnector connector = null;
+        Storage connector = null;
         try {
             connector = createConnector(accountId);
             return connector.add(task);
@@ -115,7 +115,7 @@ public class TaskDAO {
     }
 
     public boolean update(Todo task) {
-        CalendarConnector connector = null;
+        Storage connector = null;
         try {
             connector = createConnector(accountId);
             return connector.update(task);

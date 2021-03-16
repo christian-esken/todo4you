@@ -97,7 +97,7 @@ public class OneTaskActivity extends RefreshableActivity {
     @Override
     public void update(StoreResult storeResult) {
         runOnUiThread(() -> {
-            switch (storeResult.getStatus()) {
+            switch (storeResult.getStatus().status) {
                 case LOADED:
                     // This feels Hacky. The highlighted todo is not taken from the storeResult,
                     //  but both come from the TaskStore.
