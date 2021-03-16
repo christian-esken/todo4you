@@ -1,4 +1,4 @@
-package de.todo4you.todo4you.caldav;
+package de.todo4you.todo4you.storage.caldav;
 
 public class ConnectionParameters {
     private final ServerType serverType;

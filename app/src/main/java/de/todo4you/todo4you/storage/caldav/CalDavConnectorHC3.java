@@ -1,6 +1,7 @@
-package de.todo4you.todo4you.caldav;
+package de.todo4you.todo4you.storage.caldav;
 
 import android.support.annotation.NonNull;
+import android.util.Log;
 
 import net.fortuna.ical4j.model.Calendar;
 import net.fortuna.ical4j.model.Component;
@@ -27,6 +28,8 @@ import java.util.LinkedList;
 import java.util.List;
 
 import de.todo4you.todo4you.model.Todo;
+import de.todo4you.todo4you.storage.DataOrigin;
+import de.todo4you.todo4you.storage.Storage;
 
 /**
  *
@@ -38,7 +41,7 @@ import de.todo4you.todo4you.model.Todo;
  *
  *
  */
-public class CalDavConnectorHC3 implements CalendarConnector {
+public class CalDavConnectorHC3 implements Storage {
     public static final String PROC_ID_TODO4YOU =  "-//NONSGML CalDAV4j Client//EN"; // TODO Change ID
     private final ConnectionParameters conn;
 
@@ -47,15 +50,10 @@ public class CalDavConnectorHC3 implements CalendarConnector {
         this.conn = connectionParameters;
     }
 
+
+
     @Override
     public List<Todo> get (LocalDate fromDate, LocalDate toDate, boolean onlyActive) throws CalDAV4JException {
-        HttpClient httpClient = getHttpClient();
-
-        // Proxy support? Is there an Android "get standard proxy" method?
-        //httpClient.setProxy("proxy", proxyPort);
-
-        CalDAVCollection collection = new CalDAVCollection(conn.path(), (HostConfiguration) httpClient.getHostConfiguration().clone(), new CalDAV4JMethodFactory(), PROC_ID_TODO4YOU);
-
         GenerateQuery gq = new GenerateQuery(); // gq.prettyPrint();
         int from = toDay(fromDate);
         int to = toDay(toDate);
@@ -64,9 +62,18 @@ public class CalDavConnectorHC3 implements CalendarConnector {
         //  qg.setFilter("VEVENT [start;end] : UID==value1 , DTSTART==[start;end], DESCRIPTION==UNDEF, SUMMARY!=not my summary,")
         gq.setFilter("VTODO [" + from + "T000000Z;" + to + "T235959Z]" + statusFiler);
 
-        CalendarQuery calendarQuery = gq.generate();
-        List<Calendar> calendars = collection.queryCalendars(httpClient, calendarQuery);
+        return filteredGet(gq);
+    }
 
+    List<Todo> filteredGet(GenerateQuery gq) throws CalDAV4JException {
+        CalendarQuery calendarQuery = gq.generate();
+
+        HttpClient httpClient = getHttpClient();
+        // Proxy support? Is there an Android "get standard proxy" method?
+        //httpClient.setProxy("proxy", proxyPort);
+        CalDAVCollection collection = new CalDAVCollection(conn.path(), (HostConfiguration) httpClient.getHostConfiguration().clone(), new CalDAV4JMethodFactory(), PROC_ID_TODO4YOU);
+
+        List<Calendar> calendars = collection.queryCalendars(httpClient, calendarQuery);
         List<Todo> todos = new LinkedList<>();
 
         for (Calendar calendar : calendars) {
@@ -85,11 +92,25 @@ public class CalDavConnectorHC3 implements CalendarConnector {
             Iterator<VToDo> eventIterator = componentList.iterator();
             while (eventIterator.hasNext()) {
                 VToDo vtodo = eventIterator.next();
-                todos.add(new Todo(vtodo));
+                todos.add(new Todo(vtodo, DataOrigin.CloudStore));
             }
         }
 
         return todos;
+    }
+
+    @Override
+    public Todo get(String uid) throws CalDAV4JException {
+        GenerateQuery gq = new GenerateQuery();
+        gq.setFilter("VTODO : UID==" + uid);
+        List<Todo> todos = filteredGet(gq);
+        if (todos.isEmpty()) {
+            return null; // no matching entry
+        }
+        if (todos.size() > 1) {
+            Log.w("connector", todos.size() + " entries found for uid " + uid + ". Keeping the first");
+        }
+        return todos.get(0);
     }
 
     @Override
@@ -122,13 +143,6 @@ public class CalDavConnectorHC3 implements CalendarConnector {
             throw new CalDAV4JException(ise.getMessage());
         }
         return true;
-    }
-
-
-    @Override
-    public ConnectionParameters probe(ConnectionParameters connectionParameters) {
-        // no probing implemented => best set of parameters is the original one
-        return connectionParameters;
     }
 
     @NonNull

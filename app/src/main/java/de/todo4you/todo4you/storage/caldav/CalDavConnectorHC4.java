@@ -1,4 +1,4 @@
-package de.todo4you.todo4you.caldav;
+package de.todo4you.todo4you.storage.caldav;
 /*
 import com.github.caldav4j.CalDAVCollection;
 import com.github.caldav4j.CalDAVConstants;
@@ -27,7 +27,7 @@ import java.time.temporal.ChronoField;
 import java.util.Iterator;
 import java.util.List;
 
-public class CalDavConnectorHC4 implements CalendarConnector {
+public class CalDavConnectorHC4 implements Storage {
     public static final String PROC_ID_TODO4YOU =  "-//NONSGML CalDAV4j Client//EN"; // TODO Change ID
 
     private final String host;

@@ -1,4 +1,4 @@
-package de.todo4you.todo4you.caldav;
+package de.todo4you.todo4you.storage.caldav;
 
 import net.fortuna.ical4j.model.Calendar;
 import net.fortuna.ical4j.model.Component;
