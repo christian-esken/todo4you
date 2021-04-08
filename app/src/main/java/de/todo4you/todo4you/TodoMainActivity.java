@@ -25,10 +25,9 @@ import de.todo4you.todo4you.highlight.DueSelector;
 import de.todo4you.todo4you.highlight.HighlightSelector;
 import de.todo4you.todo4you.highlight.RandomSelector;
 import de.todo4you.todo4you.highlight.ShortCircuitChainedSelector;
-import de.todo4you.todo4you.model.Todo;
+import de.todo4you.todo4you.model.Idea;
 import de.todo4you.todo4you.storage.sqlite.SQLiteStorage;
 import de.todo4you.todo4you.tasks.StoreResult;
-import de.todo4you.todo4you.tasks.StoreState;
 import de.todo4you.todo4you.tasks.StoreStatus;
 import de.todo4you.todo4you.tasks.TaskStore;
 import de.todo4you.todo4you.tasks.TaskStoreStatistics;
@@ -44,9 +43,9 @@ public class TodoMainActivity extends RefreshableActivity implements AdapterView
     TextView highlightedInfoTextView = null;
     SwipeRefreshLayout pullToRefresh = null;
     private HighlightSelector highlightSelector;
-    private volatile Todo userHighlightedTodo;
+    private volatile Idea userHighlightedIdea;
     private TextView highlightedInfoDescTextView;
-    private SQLiteStorage localStorage;
+    private SQLiteStorage deviceStorage;
 
     public enum ActionType {
         NONE,
@@ -63,7 +62,7 @@ public class TodoMainActivity extends RefreshableActivity implements AdapterView
         setSupportActionBar(toolbar);
 
 
-        localStorage = new SQLiteStorage(this);
+        deviceStorage = new SQLiteStorage(this);
 
         highlightSelector = new ShortCircuitChainedSelector(new DueSelector(), new RandomSelector());
 
@@ -172,8 +171,8 @@ public class TodoMainActivity extends RefreshableActivity implements AdapterView
         Object itemAtPositionTaskSummary = parent.getItemAtPosition(position);
         // findBySummary() is hacky. Two entries could have the same summary. We need
         // full tasks in the taskListView (or at least a key/reference)
-        Todo todo = taskStore().findBySummary(itemAtPositionTaskSummary);
-        taskStore().setHighlightTodo(todo);
+        Idea idea = taskStore().findBySummary(itemAtPositionTaskSummary);
+        taskStore().setHighlightIdea(idea);
     }
 
 
@@ -205,7 +204,7 @@ public class TodoMainActivity extends RefreshableActivity implements AdapterView
 
     static final boolean DEBUG_INFOS = true;
 
-    private void fullRefresh(Todo thl, String[] newMessages) {
+    private void fullRefresh(Idea thl, String[] newMessages) {
         runOnUiThread(() -> {
             String prefixMessage = StandardDates.localDateToReadableString(thl.getAttentionDate());
             highlightedTextView.setText(thl.getSummary());
@@ -231,7 +230,7 @@ public class TodoMainActivity extends RefreshableActivity implements AdapterView
         });
     }
 
-    private int colorFromUrgency(Todo thl) {
+    private int colorFromUrgency(Idea thl) {
         ActionType actionType = determineAction(thl);
         int color = Color.LTGRAY;
         if (actionType == ActionType.DUE) {
@@ -257,10 +256,10 @@ public class TodoMainActivity extends RefreshableActivity implements AdapterView
         // TODO currentPollHasIssues should warn the user if error remains for a longer time.
         //boolean currentPollHasIssues = storeResult.getStatus().status == StoreState.ERROR;
 
-        Todo todoHighlight = null;
-        List<Todo> todos = storeResult.getTodos();
+        Idea ideaHighlight = null;
+        List<Idea> ideas = storeResult.getTodos();
 
-        if (todos.isEmpty()) {
+        if (ideas.isEmpty()) {
             // For now, handle errors only if we never load tasks successfully
             StoreStatus storeStatus = storeResult.getStatus();
             switch (storeResult.getStatus().status) {
@@ -277,26 +276,26 @@ public class TodoMainActivity extends RefreshableActivity implements AdapterView
             }
         } else {
             // There are todos
-            todos = sortTodos(todos);
-            String[] newMessages = new String[todos.size()];
-            for (int i = 0; i < todos.size(); i++) {
-                Todo todo = todos.get(i);
-                ActionType actionType = determineAction(todo);
+            ideas = sortTodos(ideas);
+            String[] newMessages = new String[ideas.size()];
+            for (int i = 0; i < ideas.size(); i++) {
+                Idea idea = ideas.get(i);
+                ActionType actionType = determineAction(idea);
                 final String duePrefix;
                 if (actionType != ActionType.NONE) {
                     duePrefix = " (" + actionTypeToText(actionType) + ")";
                 } else {
-                    duePrefix = " (" + determineWhenToDo(todo) + ")";
+                    duePrefix = " (" + determineWhenToDo(idea) + ")";
                 }
-                newMessages[i] = todo.getSummary() + duePrefix;
+                newMessages[i] = idea.getSummary() + duePrefix;
             }
 
-            if (userHighlightedTodo != null)
-                todoHighlight = userHighlightedTodo; // already selected
+            if (userHighlightedIdea != null)
+                ideaHighlight = userHighlightedIdea; // already selected
             else
-                todoHighlight = highlightSelector.select(todos); // auto-select
+                ideaHighlight = highlightSelector.select(ideas); // auto-select
 
-            fullRefresh(todoHighlight, newMessages);
+            fullRefresh(ideaHighlight, newMessages);
         }
 
 
@@ -305,21 +304,21 @@ public class TodoMainActivity extends RefreshableActivity implements AdapterView
     }
 
     @Override
-    public void updateHighlight(Todo todo) {
+    public void updateHighlight(Idea idea) {
         runOnUiThread(() -> {
-            if (todo != null) {
-                userHighlightedTodo = todo;
-                fullRefresh(todo, null);
+            if (idea != null) {
+                userHighlightedIdea = idea;
+                fullRefresh(idea, null);
             }
         });
     }
 
-    public static ActionType determineAction(Todo todo) {
-        StandardDates.Name dueName = StandardDates.dateToName(todo.getDueDate());
+    public static ActionType determineAction(Idea idea) {
+        StandardDates.Name dueName = StandardDates.dateToName(idea.getDueDate());
         if (dueName.isDue()) {
             return dueName == StandardDates.Name.OVERDUE ? ActionType.OVERDUE : ActionType.DUE;
         } else {
-            StandardDates.Name startName = StandardDates.dateToName(todo.getStartDate());
+            StandardDates.Name startName = StandardDates.dateToName(idea.getStartDate());
             if (startName.isDue()) {
                 return ActionType.START;
             }
@@ -337,16 +336,16 @@ public class TodoMainActivity extends RefreshableActivity implements AdapterView
 
 
     // Helper method. Can be moved
-    public static List<Todo> sortTodos(List<Todo> todos) {
-        Todo[] todosArray = todos.toArray(new Todo[todos.size()]);
+    public static List<Idea> sortTodos(List<Idea> ideas) {
+        Idea[] todosArray = ideas.toArray(new Idea[ideas.size()]);
         Arrays.sort(todosArray, new StandardTodoComparator());
 
         return Arrays.asList(todosArray);
     }
 
 
-    private static String determineWhenToDo(Todo todo) {
-        LocalDate attentionDate = todo.getAttentionDate();
+    private static String determineWhenToDo(Idea idea) {
+        LocalDate attentionDate = idea.getAttentionDate();
         if (attentionDate != null) {
             return StandardDates.dateToName(attentionDate).toString();
         }

@@ -12,7 +12,7 @@ import org.osaf.caldav4j.exceptions.CalDAV4JException;
 import java.time.LocalDate;
 import java.util.List;
 
-import de.todo4you.todo4you.model.Todo;
+import de.todo4you.todo4you.model.Idea;
 import de.todo4you.todo4you.storage.Storage;
 
 public class SQLiteStorage extends SQLiteOpenHelper implements Storage {
@@ -41,17 +41,17 @@ public class SQLiteStorage extends SQLiteOpenHelper implements Storage {
     }
 
     @Override
-    public List<Todo> get(LocalDate fromDate, LocalDate toDate, boolean onlyActive) throws Exception {
+    public List<Idea> get(LocalDate fromDate, LocalDate toDate, boolean onlyActive) throws Exception {
         return null;
     }
 
     @Override
-    public Todo get(String uuid) throws CalDAV4JException {
+    public Idea get(String uuid) throws CalDAV4JException {
         return null;
     }
 
     @Override
-    public boolean add(Todo task) throws CalDAV4JException {
+    public boolean add(Idea task) throws CalDAV4JException {
         ContentValues cv = new ContentValues();
         cv.put(UID_COLUMN, task.getUid());
         cv.put(SUMMARY_COLUMN, task.getDescription());
@@ -88,7 +88,7 @@ public class SQLiteStorage extends SQLiteOpenHelper implements Storage {
     }
 
     @Override
-    public boolean update(Todo task) throws CalDAV4JException {
+    public boolean update(Idea task) throws CalDAV4JException {
         return false;
     }
 }

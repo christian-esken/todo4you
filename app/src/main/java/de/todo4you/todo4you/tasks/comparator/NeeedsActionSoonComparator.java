@@ -3,7 +3,7 @@ package de.todo4you.todo4you.tasks.comparator;
 import java.time.LocalDate;
 import java.util.Comparator;
 
-import de.todo4you.todo4you.model.Todo;
+import de.todo4you.todo4you.model.Idea;
 import de.todo4you.todo4you.util.StandardDates;
 
 /**
@@ -11,9 +11,9 @@ import de.todo4you.todo4you.util.StandardDates;
  * is due, soon due, or can be started now or soon. Anything that is not due soon is sorted
  * to the end. Please note that this comparator treats due and start dates equal.
  */
-public class NeeedsActionSoonComparator implements Comparator<Todo> {
+public class NeeedsActionSoonComparator implements Comparator<Idea> {
     @Override
-    public int compare(Todo o1, Todo o2) {
+    public int compare(Idea o1, Idea o2) {
         LocalDate actionDate1 = o1.getDueDate();
         LocalDate sd1 = o1.getStartDate();
         if (actionDate1 == null || StandardDates.compare(sd1, actionDate1) < 0) {

@@ -27,7 +27,7 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 
-import de.todo4you.todo4you.model.Todo;
+import de.todo4you.todo4you.model.Idea;
 import de.todo4you.todo4you.storage.DataOrigin;
 import de.todo4you.todo4you.storage.Storage;
 
@@ -53,7 +53,7 @@ public class CalDavConnectorHC3 implements Storage {
 
 
     @Override
-    public List<Todo> get (LocalDate fromDate, LocalDate toDate, boolean onlyActive) throws CalDAV4JException {
+    public List<Idea> get (LocalDate fromDate, LocalDate toDate, boolean onlyActive) throws CalDAV4JException {
         GenerateQuery gq = new GenerateQuery(); // gq.prettyPrint();
         int from = toDay(fromDate);
         int to = toDay(toDate);
@@ -65,7 +65,7 @@ public class CalDavConnectorHC3 implements Storage {
         return filteredGet(gq);
     }
 
-    List<Todo> filteredGet(GenerateQuery gq) throws CalDAV4JException {
+    List<Idea> filteredGet(GenerateQuery gq) throws CalDAV4JException {
         CalendarQuery calendarQuery = gq.generate();
 
         HttpClient httpClient = getHttpClient();
@@ -74,7 +74,7 @@ public class CalDavConnectorHC3 implements Storage {
         CalDAVCollection collection = new CalDAVCollection(conn.path(), (HostConfiguration) httpClient.getHostConfiguration().clone(), new CalDAV4JMethodFactory(), PROC_ID_TODO4YOU);
 
         List<Calendar> calendars = collection.queryCalendars(httpClient, calendarQuery);
-        List<Todo> todos = new LinkedList<>();
+        List<Idea> ideas = new LinkedList<>();
 
         for (Calendar calendar : calendars) {
             if (calendar == null) {
@@ -92,29 +92,29 @@ public class CalDavConnectorHC3 implements Storage {
             Iterator<VToDo> eventIterator = componentList.iterator();
             while (eventIterator.hasNext()) {
                 VToDo vtodo = eventIterator.next();
-                todos.add(new Todo(vtodo, DataOrigin.CloudStore));
+                ideas.add(new Idea(vtodo, DataOrigin.CloudStore));
             }
         }
 
-        return todos;
+        return ideas;
     }
 
     @Override
-    public Todo get(String uid) throws CalDAV4JException {
+    public Idea get(String uid) throws CalDAV4JException {
         GenerateQuery gq = new GenerateQuery();
         gq.setFilter("VTODO : UID==" + uid);
-        List<Todo> todos = filteredGet(gq);
-        if (todos.isEmpty()) {
+        List<Idea> ideas = filteredGet(gq);
+        if (ideas.isEmpty()) {
             return null; // no matching entry
         }
-        if (todos.size() > 1) {
-            Log.w("connector", todos.size() + " entries found for uid " + uid + ". Keeping the first");
+        if (ideas.size() > 1) {
+            Log.w("connector", ideas.size() + " entries found for uid " + uid + ". Keeping the first");
         }
-        return todos.get(0);
+        return ideas.get(0);
     }
 
     @Override
-    public boolean add(Todo task) throws CalDAV4JException {
+    public boolean add(Idea task) throws CalDAV4JException {
         HttpClient httpClient = getHttpClient();
         VTodoCalDAVCollection collection = new VTodoCalDAVCollection(conn.path(), (HostConfiguration) httpClient.getHostConfiguration().clone(), new CalDAV4JMethodFactory(), PROC_ID_TODO4YOU);
 
@@ -127,7 +127,7 @@ public class CalDavConnectorHC3 implements Storage {
     }
 
     @Override
-    public boolean update(Todo task) throws CalDAV4JException {
+    public boolean update(Idea task) throws CalDAV4JException {
         HttpClient httpClient = getHttpClient();
         VTodoCalDAVCollection collection = new VTodoCalDAVCollection(conn.path(), (HostConfiguration) httpClient.getHostConfiguration().clone(), new CalDAV4JMethodFactory(), PROC_ID_TODO4YOU);
 

@@ -7,7 +7,7 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 
-import de.todo4you.todo4you.model.Todo;
+import de.todo4you.todo4you.model.Idea;
 import de.todo4you.todo4you.tasks.TaskStore;
 import de.todo4you.todo4you.util.StandardDates;
 
@@ -20,7 +20,7 @@ public class QuickSortActivity extends AppCompatActivity implements View.OnClick
     Button quickStatusButton;
     Button quickDelegateButton;
 
-    Todo todo;
+    Idea idea;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -29,13 +29,13 @@ public class QuickSortActivity extends AppCompatActivity implements View.OnClick
 
         setContentView(R.layout.activity_quick_sort);
 
-        todo = TaskStore.instance().findBySummary(taskRef);
-        if (todo == null) {
+        idea = TaskStore.instance().findBySummary(taskRef);
+        if (idea == null) {
             throw new IllegalArgumentException("Task "+ taskRef + " is unknown");
         }
 
         TextView overview = findViewById(R.id.quick_overview);
-        overview.setText(todo.getSummary());
+        overview.setText(idea.getSummary());
 
         quickScheduleButton = (Button)findViewById(R.id.quick_when_schedule);
         quickTodayButton = (Button)findViewById(R.id.quick_when_today);
@@ -55,17 +55,17 @@ public class QuickSortActivity extends AppCompatActivity implements View.OnClick
         Button button = (Button)v;
         boolean scheduled = false;
         if (button == quickTodayButton) {
-            todo.setDueDate(StandardDates.now());
+            idea.setDueDate(StandardDates.now());
             scheduled = true;
         } else if (button == quickTomorrowButton) {
-            todo.setDueDate(StandardDates.now().plusDays(1));
+            idea.setDueDate(StandardDates.now().plusDays(1));
             scheduled = true;
         } if (button == quick1weekButton) {
-            todo.setDueDate(StandardDates.now().plusDays(7));
+            idea.setDueDate(StandardDates.now().plusDays(7));
             scheduled = true;
         }
         if (scheduled) {
-            TaskStore.instance().taskModifed(todo);
+            TaskStore.instance().taskModifed(idea);
             Snackbar.make(v, "Task rescheduled", Snackbar.LENGTH_LONG)
                     .setAction("Action", null).show();
         }

@@ -2,7 +2,7 @@ package de.todo4you.todo4you;
 
 import android.support.annotation.Nullable;
 
-import de.todo4you.todo4you.model.Todo;
+import de.todo4you.todo4you.model.Idea;
 
 public interface RefreshTasksCallback {
     /**
@@ -11,8 +11,8 @@ public interface RefreshTasksCallback {
      * #todoHighlight. If #todoHighlight is null, the implementation can choose to unhighlight or
      * keep the old highlighted Task.
      *
-     * @param todoHighlight The highlighted task. Can be null
+     * @param ideaHighlight The highlighted task. Can be null
      * @param newMessages The full collection of new messages
      */
-    void fullRefresh(@Nullable Todo todoHighlight, String[] newMessages);
+    void fullRefresh(@Nullable Idea ideaHighlight, String[] newMessages);
 }

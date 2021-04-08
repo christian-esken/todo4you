@@ -1,24 +1,25 @@
 package de.todo4you.todo4you;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.Snackbar;
 import android.support.v7.widget.Toolbar;
-import android.view.View;
 import android.widget.TextView;
 
+import java.util.Arrays;
 import java.util.List;
 
-import de.todo4you.todo4you.model.Todo;
+import de.todo4you.todo4you.model.Idea;
 import de.todo4you.todo4you.tasks.StoreResult;
 import de.todo4you.todo4you.tasks.TaskStore;
+import de.todo4you.todo4you.tasks.comparator.StandardTodoComparator;
 
 public class OneTaskActivity extends RefreshableActivity {
     TextView highlightedTextView = null;
     TextView highlightedInfoTextView = null;
     TextView highlightedStatsView = null;
 
-    Todo highlightedTodo = null;
+    Idea highlightedIdea = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -33,12 +34,9 @@ public class OneTaskActivity extends RefreshableActivity {
         highlightedStatsView = findViewById(R.id.oneStatistics);
 
         FloatingActionButton fab = findViewById(R.id.fab);
-        fab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                        .setAction("Action", null).show();
-            }
+        fab.setOnClickListener(view -> {
+            Intent myIntent = new Intent(OneTaskActivity.this, TodoMainActivity.class);
+            OneTaskActivity.this.startActivity(myIntent);
         });
 
         TaskStore taskStore = taskStore();
@@ -63,9 +61,9 @@ public class OneTaskActivity extends RefreshableActivity {
         highlightedStatsView.setText("");
     }
 
-    private void updateView(Todo todo, List<Todo> todos) {
-        updateHighlight(todo);
-        int ideaCount = todos.size();
+    private void updateView(Idea idea, List<Idea> ideas) {
+        updateHighlight(idea);
+        int ideaCount = ideas.size();
         if (ideaCount > 0) {
             highlightedStatsView.setText("You have " + (ideaCount - 1) + " more ideas");
         } else {
@@ -74,23 +72,23 @@ public class OneTaskActivity extends RefreshableActivity {
     }
 
     @Override
-    public void updateHighlight(Todo todo) {
+    public void updateHighlight(Idea idea) {
         runOnUiThread(() -> {
-            if (todo != null) {
-                highlightedTodo = todo;
-                highlightedTextView.setText(highlightedTodo.getSummary());
-                highlightedInfoTextView.setText(todoMessage(highlightedTodo));
+            if (idea != null) {
+                highlightedIdea = idea;
+                highlightedTextView.setText(highlightedIdea.getSummary());
+                highlightedInfoTextView.setText(todoMessage(highlightedIdea));
             }
         });
     }
 
-    private String todoMessage(Todo highlightedTodo) {
+    private String todoMessage(Idea highlightedIdea) {
 
         String cr = System.lineSeparator();
-        StringBuffer sb = new StringBuffer();
-        sb.append("Start: ").append(highlightedTodo.getStartDate()).append(cr);
-        sb.append("Due  : ").append(highlightedTodo.getDueDate()).append(cr);
-        sb.append("Info : ").append(highlightedTodo.getDescription());
+        StringBuilder sb = new StringBuilder(64);
+        sb.append("Start: ").append(highlightedIdea.getStartDate()).append(cr);
+        sb.append("Due  : ").append(highlightedIdea.getDueDate()).append(cr);
+        sb.append("Info : ").append(highlightedIdea.getDescription());
         return sb.toString();
     }
 
@@ -101,8 +99,18 @@ public class OneTaskActivity extends RefreshableActivity {
                 case LOADED:
                     // This feels Hacky. The highlighted todo is not taken from the storeResult,
                     //  but both come from the TaskStore.
-                    highlightedTodo = taskStore().getHighlightTodo();
-                    updateView(highlightedTodo, storeResult.getTodos());
+                    // TODO Pick the highlighted Idea as stored in the local DB.
+                    highlightedIdea = taskStore().getHighlightIdea();
+                    List<Idea> ideas = storeResult.getTodos();
+                    if (highlightedIdea == null) {
+                        // Nothing picked yet. This can happen if this is the first opened view.
+                        Idea[] todosArray = ideas.toArray(new Idea[ideas.size()]);
+                        if (todosArray.length > 0) {
+                            Arrays.sort(todosArray, new StandardTodoComparator());
+                            highlightedIdea = todosArray[0];
+                        }
+                    }
+                    updateView(highlightedIdea, ideas);
                     break;
                 case LOADING:
                     updateView("LOADING");

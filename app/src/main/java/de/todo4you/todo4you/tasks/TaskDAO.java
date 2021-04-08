@@ -12,7 +12,7 @@ import de.todo4you.todo4you.storage.caldav.CalDavConnectorHC3;
 import de.todo4you.todo4you.storage.Storage;
 import de.todo4you.todo4you.storage.caldav.ConnectionParameters;
 import de.todo4you.todo4you.model.CompletionState;
-import de.todo4you.todo4you.model.Todo;
+import de.todo4you.todo4you.model.Idea;
 
 public class TaskDAO {
     private final static String accountsFileName = "accounts.properties";
@@ -38,27 +38,27 @@ public class TaskDAO {
         int minusDays = 1000;
         int plusDays = 100;
         try {
-            List<Todo> todosLoaded = load(minusDays, plusDays, alsoCompleted);
+            List<Idea> todosLoaded = load(minusDays, plusDays, alsoCompleted);
             return new StoreResult(todosLoaded, StoreStatus.loaded);
         } catch (Exception exc) {
             return new StoreResult(Collections.emptyList(), StoreState.ERROR, "Calendar error: " + exc.getMessage(), exc);
         }
     }
 
-    protected List<Todo> load(int minusDays, int plusDays, boolean alsoCompleted) throws Exception {
+    protected List<Idea> load(int minusDays, int plusDays, boolean alsoCompleted) throws Exception {
         Storage connector = createConnector(accountId);
 
         LocalDate now = LocalDate.now();
-        List<Todo> todosComplete = new ArrayList<>();
-        List<Todo> todosNew = connector.get(now.minusDays(minusDays), now.plusDays(plusDays), !alsoCompleted);
-        for (Todo todo : todosNew) {
+        List<Idea> todosComplete = new ArrayList<>();
+        List<Idea> todosNew = connector.get(now.minusDays(minusDays), now.plusDays(plusDays), !alsoCompleted);
+        for (Idea idea : todosNew) {
             // Maybe remove the alsoCompleted check here. It has moved to the Connector.
             // This needs refinement. How will the user then see his heroicly completed tasks if
             // we do not load them? Also we keep them in memory after a user marked it as complete.
             // Probably we want to keep the "recently completed" tasks in memory. Or have two
             // task lists: Active (to select the 1 task from) and inactive (completed, canceled).
-            if (alsoCompleted || todo.getCompletionState() != CompletionState.COMPLETED) {
-                todosComplete.add(todo);
+            if (alsoCompleted || idea.getCompletionState() != CompletionState.COMPLETED) {
+                todosComplete.add(idea);
             }
         }
         return todosComplete;
@@ -103,7 +103,7 @@ public class TaskDAO {
         return conn;
     }
 
-    public boolean add(Todo task) {
+    public boolean insertOrUpdate(Idea task) {
         Storage connector = null;
         try {
             connector = createConnector(accountId);
@@ -114,7 +114,7 @@ public class TaskDAO {
         }
     }
 
-    public boolean update(Todo task) {
+    public boolean update(Idea task) {
         Storage connector = null;
         try {
             connector = createConnector(accountId);

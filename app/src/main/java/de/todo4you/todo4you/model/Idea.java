@@ -26,13 +26,13 @@ import de.todo4you.todo4you.util.StandardDates;
 import de.todo4you.todo4you.util.UidFactory;
 
 /**
- * The internal model for a Todo. It holds all information like title, description, status and
+ * The internal model for an Idea. It holds all information like title, description, status and
  * associated dates.
  * TODO The model works with dates only, discarding the time component. The time component is
  * usually preserved, but gets lost when this Todo is persisted (to the calendar) after
  * modification from the user.
  */
-public class Todo {
+public class Idea {
     //public static final Logger logger = LoggerFactory.getLogger(Todo.class);
     private static final String PROP_X_TODO4YOU_STARS = "x-todo4you-stars";
     private static final String PROP_X_TODO4YOU_FAVORITE = "x-todo4you-favorite";
@@ -45,21 +45,18 @@ public class Todo {
     volatile CompletionState completionState = CompletionState.NEW;
     volatile int stars = 0;
     volatile boolean favorite = false;
-    volatile TodoState todoState = TodoState.UNINITIALIZED;
+    volatile SyncState syncState = null; // MUST be initialized in all constructors!
     LocalDate startDate = null;
     LocalDate dueDate = null;
     LocalDate completionDate = null;
     volatile boolean dirty = false;
-
-    volatile boolean inSyncWithDeviceStore = false;
-    volatile boolean inSyncWithCloudStore = false;
 
     /**
      * Creates an instance from a backing VTodo. The VTodo is converted into the internal model.
      *
      * @param vtodo The backing VTodo
      */
-    public Todo(VToDo vtodo, DataOrigin dataOrigin) {
+    public Idea(VToDo vtodo, DataOrigin dataOrigin) {
         this.vtodo = vtodo;
         this.completionState = fromLibToModel(vtodo.getStatus());
 
@@ -74,7 +71,6 @@ public class Todo {
         } else {
             uid = uidFromVtodo.getValue();
         }
-        todoState = TodoState.UNMODIFIED;
 
         DtStart start = vtodo.getStartDate();
         this.startDate = startDate == null ? null : StandardDates.dateToLocalDate(start.getDate());
@@ -82,34 +78,23 @@ public class Todo {
         this.dueDate = due == null ? null : StandardDates.dateToLocalDate(due.getDate());
         Completed completed = vtodo.getDateCompleted();
         this.completionDate = completed == null ? null : StandardDates.dateToLocalDate(completed.getDate());
-        insyncByOrigin(dataOrigin);
+        syncState = SyncState.buildFrom(dataOrigin);
     }
     /**
      * Creates a new instance without backing VTodo. The latter will be created on an upstream sync.
      */
-    public Todo(String summary) {
+    public Idea(String summary) {
         this.summary = summary;
         vtodo = null; // invalid
         this.completionState = CompletionState.NEW;
-        todoState = TodoState.FRESHLY_CREATED;
         uid = UidFactory.instance().produceNewUid();
 
         stars = 0;
         favorite = false;
         dirty = true;
-        insyncByOrigin(DataOrigin.NewlyCreated);
+        syncState = SyncState.buildNew();
     }
 
-
-    private void insyncByOrigin(DataOrigin dataOrigin) {
-        this.inSyncWithCloudStore = dataOrigin == DataOrigin.CloudStore;
-        this.inSyncWithDeviceStore = dataOrigin == DataOrigin.DeviceStore;
-    }
-
-    private void insyncReset(boolean inSyncWithCloudstore) {
-        this.inSyncWithCloudStore = inSyncWithCloudstore;
-        this.inSyncWithDeviceStore = false;
-    }
 
     private boolean fromBooleanPropertyToModel(Property property, boolean defaultValue) {
         if (property == null) {
@@ -297,7 +282,7 @@ public class Todo {
         }
 
         dirty = reallyModified;
-        insyncReset(!dirty);
+        syncState.insyncReset(!dirty);
         return reallyModified;
     }
 
@@ -407,14 +392,6 @@ public class Todo {
         return vtodo;
     }
 
-    public void setDirty(boolean dirty) {
-        this.dirty = dirty;
-    }
-
-    public boolean isDirty() {
-        return dirty;
-    }
-
     public boolean isLocked() {
         // TOOD Implement actual entry locking. From a design perspective, the TaskStore must
         // hold all locked uid's. To lock: modified and new tasks.
@@ -422,14 +399,14 @@ public class Todo {
     }
 
     public boolean needsDeviceSync() {
-        return !inSyncWithDeviceStore;
+        return !syncState.inSyncWithDeviceStore();
     }
 
     public boolean needsCloudSync() {
-        return !inSyncWithCloudStore;
+        return !syncState.inSyncWithCloudStore();
     }
 
     public void setCloudSynced() {
-        inSyncWithCloudStore = true;
+        syncState.setInSyncWithCloudStore();
     }
 }

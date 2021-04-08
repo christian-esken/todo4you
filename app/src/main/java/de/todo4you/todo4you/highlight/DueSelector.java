@@ -3,20 +3,20 @@ package de.todo4you.todo4you.highlight;
 import java.time.LocalDate;
 import java.util.List;
 
-import de.todo4you.todo4you.model.Todo;
+import de.todo4you.todo4you.model.Idea;
 
 public class DueSelector implements HighlightSelector {
     @Override
-    public Todo select(List<Todo> todos) {
-        Todo best = null;
+    public Idea select(List<Idea> ideas) {
+        Idea best = null;
         LocalDate earliestDue = null;
-        for (Todo todo : todos) {
-            LocalDate due = todo.getDueDate();
+        for (Idea idea : ideas) {
+            LocalDate due = idea.getDueDate();
             if (due == null) {
                 continue;
             }
             if (best == null || due.isBefore(earliestDue)) {
-                best = todo;
+                best = idea;
                 earliestDue = due;
             }
         }

@@ -3,7 +3,7 @@ package de.todo4you.todo4you.highlight;
 import java.util.Arrays;
 import java.util.List;
 
-import de.todo4you.todo4you.model.Todo;
+import de.todo4you.todo4you.model.Idea;
 
 public class ShortCircuitChainedSelector implements HighlightSelector {
     final HighlightSelector[] selectors;
@@ -14,18 +14,18 @@ public class ShortCircuitChainedSelector implements HighlightSelector {
 
 
     @Override
-    public Todo select(List<Todo> todos) {
-        if (todos.isEmpty()) {
+    public Idea select(List<Idea> ideas) {
+        if (ideas.isEmpty()) {
             return null;
         }
 
         for (HighlightSelector selector : selectors) {
-            Todo selected = selector.select(todos);
+            Idea selected = selector.select(ideas);
             if (selected != null) {
                 return selected; // short-circuit => exit on first match
             }
         }
 
-        return todos.get(0);
+        return ideas.get(0);
     }
 }

@@ -11,7 +11,7 @@ import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
 import android.widget.RadioButton;
 
-import de.todo4you.todo4you.model.Todo;
+import de.todo4you.todo4you.model.Idea;
 import de.todo4you.todo4you.tasks.TaskStore;
 
 public class AddTask extends AppCompatActivity implements View.OnFocusChangeListener, View.OnClickListener {
@@ -44,7 +44,7 @@ public class AddTask extends AppCompatActivity implements View.OnFocusChangeList
             public void onClick(View view) {
                 Snackbar.make(view, "Adding task", Snackbar.LENGTH_LONG)
                         .setAction("Action", null).show();
-                Todo task = new Todo(summaryText.getText().toString());
+                Idea task = new Idea(summaryText.getText().toString());
                 TaskStore.instance().addNewTask(task);
             }
         });

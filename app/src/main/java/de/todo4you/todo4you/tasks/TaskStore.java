@@ -7,7 +7,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-import de.todo4you.todo4you.model.Todo;
+import de.todo4you.todo4you.model.Idea;
 import de.todo4you.todo4you.storage.StorageStatistics;
 import de.todo4you.todo4you.util.StoreUpdateNotifier;
 
@@ -17,24 +17,24 @@ import de.todo4you.todo4you.util.StoreUpdateNotifier;
  */
 public class TaskStore extends Thread {
 
-    public static final long FIFTEEN_MINUTES_IN_MS = 30000; // 1000 * 15 * 60;
+    public static final long FIFTEEN_MINUTES_IN_MS = 1000 * 15 * 60;
     public static final long MINIMUM_WAIT_IN_MS = 10000; // Wait at least 10 seconds
     @GuardedBy("TaskStore.class")
     private static TaskStore instance;
     List<StoreUpdateNotifier> listeners = new CopyOnWriteArrayList<>();
 
     // Migrate the following 2 back to StoreResult ?!?
-    List<Todo> ideas = new ArrayList<>();
+    List<Idea> ideas = new ArrayList<>();
     StoreStatus status = StoreStatus.loading;
 
-    Todo highlightTodo; // TODO move this field somewhere else.
+    Idea highlightIdea; // TODO move this field somewhere else.
 
     private volatile boolean running = true;
     private volatile boolean upstreamSync = false;
     private volatile boolean downstreamSync = false;
 
 
-    public static final synchronized TaskStore instance() {
+    public static synchronized TaskStore instance() {
         if (instance == null) {
             instance = new TaskStore();
             instance.start();
@@ -46,13 +46,13 @@ public class TaskStore extends Thread {
         return new StoreResult(ideas, status);
     }
 
-    public Todo getByUid(String ruid) {
+    public Idea getByUid(String ruid) {
         if (ruid == null) {
             return null;
         }
-        for (Todo todo : ideas) {
-            if (ruid.equals(todo.getUid())) {
-                return todo;
+        for (Idea idea : ideas) {
+            if (ruid.equals(idea.getUid())) {
+                return idea;
             }
         }
         return null;
@@ -64,13 +64,13 @@ public class TaskStore extends Thread {
         int cCount = (int)ideas.stream().filter(i -> !i.needsCloudSync()).count();
         StorageStatistics cloud = new StorageStatistics("Cloud", true, iCount, cCount);
         int dCount = (int)ideas.stream().filter(i -> !i.needsDeviceSync()).count();
-        StorageStatistics device = new StorageStatistics("AppDB", true, 0, dCount);
+        StorageStatistics device = new StorageStatistics("AppDB", false, 0, dCount);
 
         return new TaskStoreStatistics(memory, cloud, device);
     }
 
-    public Todo getHighlightTodo() {
-        return highlightTodo;
+    public Idea getHighlightIdea() {
+        return highlightIdea;
     }
 
     TaskStore()
@@ -85,21 +85,21 @@ public class TaskStore extends Thread {
     }
 
 
-    public Todo findBySummary(Object taskObject) {
+    public Idea findBySummary(Object taskObject) {
         if (!(taskObject instanceof String)) {
             return null;
         }
         String taskDescription = (String)taskObject;
-        for (Todo todo : ideas) {
-            if (todo.getSummary().isEmpty()) {
+        for (Idea idea : ideas) {
+            if (idea.getSummary().isEmpty()) {
                 continue; // no summary
             }
             // findBySummary() is hacky. Two entries could have the same summary.
             // We need full tasks in the taskListView (or at least a key/reference)
             // Additionally the taskDescription has a status prepended, so only the start
             // matches.
-            if (taskDescription.startsWith(todo.getSummary())) {
-                return todo;
+            if (taskDescription.startsWith(idea.getSummary())) {
+                return idea;
             }
         }
         return null;
@@ -112,15 +112,15 @@ public class TaskStore extends Thread {
             try {
                 TaskDAO taskDao = TaskDAO.instance();
                 // -1- upstream-sync NEW ideas and MODIFIED ideas
-                Iterator<Todo> iterator = ideas.iterator();
+                Iterator<Idea> iterator = ideas.iterator();
                 while (iterator.hasNext()) {
-                    Todo idea = iterator.next();
+                    Idea idea = iterator.next();
                     if (idea.needsDeviceSync()) {
-                        // TODO implement wrting to SQLite here
+                        // TODO implement writing to SQLite here
                     }
                     if (idea.needsCloudSync()) {
                         idea.updateVTodoFromModel();
-                        if (taskDao.add(idea)) {
+                        if (taskDao.insertOrUpdate(idea)) {
                             idea.setCloudSynced();
                         }
                     }
@@ -173,13 +173,13 @@ public class TaskStore extends Thread {
      * @return
      */
     private void merge(StoreResult remote) {
-        List<Todo> merged = new ArrayList<>(remote.getTodos().size());
-        List<Todo> locked = new ArrayList<>();
+        List<Idea> merged = new ArrayList<>(remote.getTodos().size());
+        List<Idea> locked = new ArrayList<>();
 
         // -1- Pick all remote entries, unless a local entry is dirty (not yet synced)
-        for (Todo rtodo : remote.getTodos()) {
+        for (Idea rtodo : remote.getTodos()) {
             String ruid = rtodo.getUid();
-            Todo ltodo = getByUid(ruid);
+            Idea ltodo = getByUid(ruid);
             /*    ltodo  null  locked   add
              *              t       *   merged
              *              f       f   merged
@@ -187,10 +187,10 @@ public class TaskStore extends Thread {
              */
             boolean isLocked = ltodo != null && ltodo.isLocked();
             if (isLocked) {
-                locked.add(ltodo);
+                locked.add(ltodo); // add local
             } else {
                 // TOOD Also check if local modification time is newer than remote. Then keep the local.
-                merged.add(rtodo);
+                merged.add(rtodo); // add remote
             }
         }
 
@@ -226,9 +226,9 @@ public class TaskStore extends Thread {
      * TaskStore, this method returns without any action.
      * @param task The modified task. It must be known in this TaskStore.
      */
-    public void taskModifed(Todo task) {
-        Todo todoFromStore = getByUid(task.getUid());
-        if (todoFromStore != null) {
+    public void taskModifed(Idea task) {
+        Idea ideaFromStore = getByUid(task.getUid());
+        if (ideaFromStore != null) {
             // Inform the listeners if we know the UID. Even if it is a different
             // To do instance, as identity is defined by UID.
             informListeners();
@@ -236,7 +236,7 @@ public class TaskStore extends Thread {
         }
     }
 
-    public void addNewTask(Todo task) {
+    public void addNewTask(Idea task) {
         ideas.add(task);
         informListeners();
         triggerUpstreamSync();
@@ -253,15 +253,15 @@ public class TaskStore extends Thread {
     }
 
     // TODO Likely move this method somewhere else
-    public void setHighlightTodo(Todo todo) {
-        if (todo != highlightTodo) {
+    public void setHighlightIdea(Idea idea) {
+        if (idea != highlightIdea) {
             // modified
             for (StoreUpdateNotifier listener : listeners) {
-                highlightTodo = todo;
+                highlightIdea = idea;
                 synchronized (listener) {
                     // Use the method parameter, as the field could concurrently change
                     // We do not yet do specific thread-safety here, e.g. DCL or AtomicReference.
-                    listener.updateHighlight(todo);
+                    listener.updateHighlight(idea);
                 }
             }
         }
