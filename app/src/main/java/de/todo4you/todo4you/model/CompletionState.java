@@ -12,5 +12,17 @@ public enum CompletionState {
     // Completed
     COMPLETED,
     // Cancelled
-    CANCELLED
+    CANCELLED;
+
+    public static CompletionState valueOfOrDefault(String state, CompletionState defaultValue) {
+        if (state == null) {
+            return defaultValue;
+        }
+        try {
+            return CompletionState.valueOf(state);
+        } catch (Exception exc) {
+            // If it is null, or an unknown status, we return the default value
+            return defaultValue;
+        }
+    }
 }

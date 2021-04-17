@@ -61,8 +61,8 @@ public class TodoMainActivity extends RefreshableActivity implements AdapterView
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
-
-        deviceStorage = new SQLiteStorage(this);
+        // SQLiteStorage is initialized in every initial view, to make sure the TaskStore can sync.
+        deviceStorage = SQLiteStorage.build(this);
 
         highlightSelector = new ShortCircuitChainedSelector(new DueSelector(), new RandomSelector());
 

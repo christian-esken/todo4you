@@ -34,4 +34,8 @@ public class SyncState {
     public void setInSyncWithCloudStore() {
         inSyncWithCloudStore = true;
     }
+
+    public void setInSyncWithDeviceStore() {
+        inSyncWithDeviceStore =true;
+    }
 }

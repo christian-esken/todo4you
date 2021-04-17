@@ -80,6 +80,7 @@ public class Idea {
         this.completionDate = completed == null ? null : StandardDates.dateToLocalDate(completed.getDate());
         syncState = SyncState.buildFrom(dataOrigin);
     }
+
     /**
      * Creates a new instance without backing VTodo. The latter will be created on an upstream sync.
      */
@@ -93,6 +94,22 @@ public class Idea {
         favorite = false;
         dirty = true;
         syncState = SyncState.buildNew();
+    }
+
+    /**
+     * Creates a new instance without backing VTodo. The latter will be created on an upstream sync.
+     */
+    public Idea (String uid, String summary, String description, String completionState, boolean needsCloudSync) {
+        this.uid = uid;
+        this.description = description;
+        this.summary = summary;
+        this.completionState = CompletionState.valueOfOrDefault(completionState, CompletionState.UNDEFINED);
+        vtodo = null; // invalid
+
+        stars = 0;
+        favorite = false;
+        dirty = needsCloudSync;
+        syncState = SyncState.buildFrom(DataOrigin.DeviceStore);
     }
 
 
@@ -402,11 +419,19 @@ public class Idea {
         return !syncState.inSyncWithDeviceStore();
     }
 
+    /**
+     * TODO This method is probably superfluous, as {@link #updateVTodoFromModel()} already
+     * checks for consistency with the backing VToDO.
+     */
     public boolean needsCloudSync() {
         return !syncState.inSyncWithCloudStore();
     }
 
     public void setCloudSynced() {
         syncState.setInSyncWithCloudStore();
+    }
+
+    public void setDeviceSynced() {
+        syncState.setInSyncWithDeviceStore();
     }
 }

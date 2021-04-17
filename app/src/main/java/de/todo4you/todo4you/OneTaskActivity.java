@@ -10,6 +10,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import de.todo4you.todo4you.model.Idea;
+import de.todo4you.todo4you.storage.sqlite.SQLiteStorage;
 import de.todo4you.todo4you.tasks.StoreResult;
 import de.todo4you.todo4you.tasks.TaskStore;
 import de.todo4you.todo4you.tasks.comparator.StandardTodoComparator;
@@ -20,10 +21,15 @@ public class OneTaskActivity extends RefreshableActivity {
     TextView highlightedStatsView = null;
 
     Idea highlightedIdea = null;
+    private SQLiteStorage deviceStorage;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        // SQLiteStorage is initialized in every initial view, to make sure the TaskStore can sync.
+        deviceStorage = SQLiteStorage.build(this);
 
         setContentView(R.layout.activity_one_task);
         Toolbar toolbar = findViewById(R.id.toolbar);

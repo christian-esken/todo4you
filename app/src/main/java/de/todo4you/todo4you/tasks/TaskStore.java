@@ -9,6 +9,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 import de.todo4you.todo4you.model.Idea;
 import de.todo4you.todo4you.storage.StorageStatistics;
+import de.todo4you.todo4you.storage.sqlite.SQLiteStorage;
 import de.todo4you.todo4you.util.StoreUpdateNotifier;
 
 /**
@@ -21,6 +22,7 @@ public class TaskStore extends Thread {
     public static final long MINIMUM_WAIT_IN_MS = 10000; // Wait at least 10 seconds
     @GuardedBy("TaskStore.class")
     private static TaskStore instance;
+
     List<StoreUpdateNotifier> listeners = new CopyOnWriteArrayList<>();
 
     // Migrate the following 2 back to StoreResult ?!?
@@ -29,6 +31,8 @@ public class TaskStore extends Thread {
 
     Idea highlightIdea; // TODO move this field somewhere else.
 
+    private volatile boolean deviceStoreLoaded = false;
+    private volatile boolean cloudStoreLoaded = false;
     private volatile boolean running = true;
     private volatile boolean upstreamSync = false;
     private volatile boolean downstreamSync = false;
@@ -111,22 +115,55 @@ public class TaskStore extends Thread {
         while (running) {
             try {
                 TaskDAO taskDao = TaskDAO.instance();
-                // -1- upstream-sync NEW ideas and MODIFIED ideas
-                Iterator<Idea> iterator = ideas.iterator();
-                while (iterator.hasNext()) {
-                    Idea idea = iterator.next();
-                    if (idea.needsDeviceSync()) {
-                        // TODO implement writing to SQLite here
+                if (!deviceStoreLoaded) {
+                    SQLiteStorage deviceStorage = SQLiteStorage.instance();
+                    if (deviceStorage != null) {
+                        // Already initialized (by some view)
+                        List<Idea> ideas = deviceStorage.getAll();
+                        merge(new StoreResult(ideas, StoreState.LOADED));
+                        deviceStoreLoaded = true;
+                        informListeners();
                     }
-                    if (idea.needsCloudSync()) {
-                        idea.updateVTodoFromModel();
-                        if (taskDao.insertOrUpdate(idea)) {
-                            idea.setCloudSynced();
+                }
+
+
+                // -1- upstream-sync NEW ideas and MODIFIED ideas
+                if (deviceStoreLoaded) {
+                    Iterator<Idea> iterator = ideas.iterator();
+                    while (iterator.hasNext()) {
+                        Idea idea = iterator.next();
+                        if (deviceStoreLoaded && idea.needsDeviceSync()) {
+                            SQLiteStorage deviceStorage = SQLiteStorage.instance();
+                            if (deviceStorage != null) {
+                                deviceStorage.add(idea);
+                                idea.setDeviceSynced();
+                            }
                         }
                     }
                 }
 
-                // TODO Trigger sleep here if we did not reach the time for doing the downstream sync.
+                if (cloudStoreLoaded) {
+                    // Important! Sync to cloud store only, if the data was already loaded from
+                    // cloud. If we would sync to cloud before, then two bad things can happen:
+                    // 1. We unconditionally overwrite changes done in the cloud store, w/o
+                    //    applying a sensibel merge strategy.
+                    // 2. The VToDo on the device may be incomplete, for example if the backing
+                    //    VTodo has additional fields, e.g. an alarm or an image. All these extra
+                    //    fields are not be known and would get silently overwritten/discarded
+                    //    in the cloud.
+                    Iterator<Idea> iteratorForCloudSync = ideas.iterator();
+                    while (iteratorForCloudSync.hasNext()) {
+                        Idea idea = iteratorForCloudSync.next();
+                        if (idea.needsCloudSync()) {
+                            if (idea.updateVTodoFromModel()) {
+                                if (taskDao.insertOrUpdate(idea)) {
+                                    idea.setCloudSynced();
+                                }
+                            }
+                        }
+                    }
+                }
+
                 long now = System.currentTimeMillis();
                 if (downstreamSync || now >= nextDownstreamSync) {
                     // downstreamSync can be triggered by a reload gesture
@@ -137,11 +174,12 @@ public class TaskStore extends Thread {
                     StoreResult todosLoaded = taskDao.loadAll();
                     status = todosLoaded.getStatus();
                     merge(todosLoaded); // merge in everything you got (so far)
+                    cloudStoreLoaded = true;
                     informListeners();
                 }
             }
             catch(Exception exc){
-                // Unexpected exception, e.g. NPE. No data recieved, but remember the error
+                // Unexpected exception, e.g. NPE. No data received, but remember the error
                 status = new StoreStatus(StoreState.ERROR, "Error: " + exc.getMessage(), exc);
             }
 
@@ -186,6 +224,9 @@ public class TaskStore extends Thread {
              *              f       t   locked
              */
             boolean isLocked = ltodo != null && ltodo.isLocked();
+            // TODO We need a much more intelligent merge strategy, e.g. each field in
+            //  the Idea class needs a timestamp. If it is newer than the backing VTodo then
+            // it wins, otherwise the field from the backing VTodo will win
             if (isLocked) {
                 locked.add(ltodo); // add local
             } else {
